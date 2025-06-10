@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Animeone</string>
     <string name="anime_list">動畫列表</string>
-    <string name="favorite_list">我的收藏</string>
+    <string name="record_list">觀看紀錄</string>
     <string name="my_profile">我的檔案</string>
     <string name="event_list">活動列表</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.aaron.chen.animeone
+package com.aaron.chen.animeone.app.view.activity
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,10 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.aaron.chen.animeone.ui.screen.FavoriteScreen
-import com.aaron.chen.animeone.ui.screen.AnimeScreen
-import com.aaron.chen.animeone.ui.screen.ProfileScreen
-import com.aaron.chen.animeone.ui.theme.AnimeoneTheme
+import com.aaron.chen.animeone.app.view.ui.screen.AnimeScreen
+import com.aaron.chen.animeone.app.view.ui.screen.RecordScreen
+import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,22 +73,19 @@ fun BottomNavApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Anime.route) { AnimeScreen() }
-            composable(Screen.Favorite.route) { FavoriteScreen() }
-            composable(Screen.Profile.route) { ProfileScreen() }
+            composable(Screen.Record.route) { RecordScreen() }
         }
     }
 }
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Anime : Screen("anime", "Anime", Icons.Default.Home)
-    object Favorite : Screen("favorite", "Favorite", Icons.Default.Favorite)
-    object Profile : Screen("profile", "Profile", Icons.Default.Person)
+    object Record : Screen("record", "Record", Icons.Default.Favorite)
 }
 
 val bottomNavItems = listOf(
     Screen.Anime,
-    Screen.Favorite,
-    Screen.Profile
+    Screen.Record
 )
 
 @Composable

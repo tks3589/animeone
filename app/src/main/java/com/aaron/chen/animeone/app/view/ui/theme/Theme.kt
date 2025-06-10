@@ -1,6 +1,5 @@
-package com.aaron.chen.animeone.ui.theme
+package com.aaron.chen.animeone.app.view.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
