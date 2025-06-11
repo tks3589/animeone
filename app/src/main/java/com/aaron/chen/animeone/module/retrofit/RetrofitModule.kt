@@ -1,6 +1,8 @@
 package com.aaron.chen.animeone.module.retrofit
 
 import android.content.Context
+import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
+import com.aaron.chen.animeone.app.model.deserializer.AnimeListRespVoDeserializer
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import org.koin.core.annotation.Module
@@ -13,10 +15,11 @@ import java.util.concurrent.TimeUnit
 @Module
 object RetrofitModule: KoinComponent {
     const val MAX_REQUESTS_PER_HOST: Int = 10
+    const val BASE_URL: String = "https://api.example.com/"
 
     private lateinit var okHttpClient: OkHttpClient
 
-    @Single(binds = [IEtRetrofitApi::class])
+    @Single
     fun getInstance(applicationContext: Context): IEtRetrofitApi {
         return initApi(applicationContext)
     }
@@ -31,13 +34,17 @@ object RetrofitModule: KoinComponent {
 
 
         okHttpClient = okhttpClientBuilder.build()
-        okHttpClient.dispatcher().maxRequestsPerHost = MAX_REQUESTS_PER_HOST
+        okHttpClient.dispatcher.maxRequestsPerHost = MAX_REQUESTS_PER_HOST
 
-        val gson = GsonBuilder().create()
+        val gson = GsonBuilder()
+            .registerTypeAdapter(AnimeListRespVo::class.java, AnimeListRespVoDeserializer())
+            .create()
 
         val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
+            .addCallAdapterFactory(RetrofitFlowFactory.create())
             .build()
 
         return retrofit.create(IEtRetrofitApi::class.java)

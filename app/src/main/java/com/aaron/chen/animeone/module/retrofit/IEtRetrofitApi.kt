@@ -1,8 +1,10 @@
 package com.aaron.chen.animeone.module.retrofit
 
+import com.aaron.chen.animeone.app.model.data.bean.AnimeBean
 import com.aaron.chen.animeone.constant.ApiConst.HEADER_VALUE_REQUEST_TAG
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
 import kotlinx.coroutines.flow.Flow
+import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Url
