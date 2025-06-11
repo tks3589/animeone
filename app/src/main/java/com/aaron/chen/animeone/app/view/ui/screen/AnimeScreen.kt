@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -95,15 +96,22 @@ fun AnimeItem(anime: AnimeEntity) {
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(
-            verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(1f)
+                .weight(1f),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = anime.title,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 2
+            )
+
+            Text(
+                text = anime.status+" , "+anime.year+" , "+anime.season,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 1
             )
         }
     }
