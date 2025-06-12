@@ -1,5 +1,7 @@
 package com.aaron.chen.animeone.app.view.ui.screen
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,12 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.aaron.chen.animeone.R
+import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 import org.koin.androidx.compose.koinViewModel
@@ -35,6 +39,7 @@ import org.koin.androidx.compose.koinViewModel
 fun AnimeScreen(
     viewModel: AnimeoneViewModel = koinViewModel()
 ) {
+    val context = LocalContext.current
     val animeItems = viewModel.requestAnimes().collectAsLazyPagingItems()
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -54,7 +59,11 @@ fun AnimeScreen(
                 items(animeItems.itemCount) { index ->
                     val anime = animeItems[index]
                     if (anime != null) {
-                        AnimeItem(anime)
+                        AnimeItem(anime, onClick = {
+                            val intent = Intent(context, AnimePlayerActivity::class.java)
+                            intent.putExtra("animeId", anime.id)
+                            context.startActivity(intent)
+                        })
                     }
                 }
 
@@ -78,10 +87,11 @@ fun AnimeScreen(
 }
 
 @Composable
-fun AnimeItem(anime: AnimeEntity) {
+fun AnimeItem(anime: AnimeEntity, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(8.dp)
     ) {
         AsyncImage(
