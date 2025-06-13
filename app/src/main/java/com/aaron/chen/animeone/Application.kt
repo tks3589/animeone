@@ -3,7 +3,7 @@ package com.aaron.chen.animeone
 import android.app.Application
 import android.util.Log
 import com.aaron.chen.animeone.di.getKoinModuleList
-import com.aaron.chen.animeone.module.retrofit.IEtRetrofitApi
+import com.aaron.chen.animeone.module.retrofit.IRetrofitApi
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -25,7 +25,7 @@ class Application: Application() {
     }
 
     private fun preInitRetrofitApi() {
-        get<IEtRetrofitApi>()
+        get<IRetrofitApi>()
         Log.d(logTag, "[preInitRetrofitApi] pre-init retrofit instance")
     }
 }

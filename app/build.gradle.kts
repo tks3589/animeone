@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.bundles.androidx.room)
+    implementation(libs.jsoup)
     api(platform(libs.koin.bom))
     api(libs.bundles.koin)
     ksp(libs.koin.ksp.compiler)

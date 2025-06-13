@@ -31,13 +31,12 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
-import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.database.entity.AnimeEntity
-import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun AnimeScreen(
-    viewModel: AnimeoneViewModel = koinViewModel()
+    viewModel: IAnimeoneViewModel
 ) {
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimes().collectAsLazyPagingItems()

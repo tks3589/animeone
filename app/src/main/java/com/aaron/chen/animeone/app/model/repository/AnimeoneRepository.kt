@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
+import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.INITIAL_LOAD_SIZE
@@ -39,5 +40,9 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
                     .also { currentPagingSource = it }
             }
         ).flow
+    }
+
+    override fun requestAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean> {
+        return animeApiModel.getAnimeSeasonTimeLine()
     }
 }
