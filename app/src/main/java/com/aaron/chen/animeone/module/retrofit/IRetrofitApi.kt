@@ -13,4 +13,7 @@ interface IRetrofitApi {
 
     @GET
     fun getAnimeSeasonTimeLine(@Header(HEADER_VALUE_REQUEST_TAG) requestTag: String, @Url url: String): Flow<String>
+
+    @GET
+    fun getAnimeEpisodes(@Header(HEADER_VALUE_REQUEST_TAG) requestTag: String, @Url url: String): Flow<String>
 }

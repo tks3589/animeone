@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
+import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
@@ -44,5 +45,9 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
 
     override fun requestAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean> {
         return animeApiModel.getAnimeSeasonTimeLine()
+    }
+
+    override fun requestAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {
+        return animeApiModel.getAnimeEpisodes(animeId)
     }
 }

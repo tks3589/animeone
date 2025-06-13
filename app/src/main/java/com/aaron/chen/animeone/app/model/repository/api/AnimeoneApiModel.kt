@@ -3,6 +3,7 @@ package com.aaron.chen.animeone.app.model.repository.api
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.aaron.chen.animeone.app.model.data.bean.AnimeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.responsevo.toAnimeList
 import com.aaron.chen.animeone.app.model.data.responsevo.toTimeLine
@@ -34,6 +35,13 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
         val url = RetrofitModule.BASE_URL + getSeasonTitle()
         return apiModel.getAnimeSeasonTimeLine(requestTag, url).map { html ->
             HtmlUtils.toAnimeTimeLineRespVo(html).toTimeLine()
+        }
+    }
+
+    override fun getAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {
+        val url = RetrofitModule.BASE_URL + "?cat=" + animeId
+        return apiModel.getAnimeEpisodes(requestTag, url).map { html ->
+            HtmlUtils.toAnimeEpisodeList(html)
         }
     }
 }

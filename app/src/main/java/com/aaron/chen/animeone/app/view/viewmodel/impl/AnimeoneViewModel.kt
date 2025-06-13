@@ -2,6 +2,7 @@ package com.aaron.chen.animeone.app.view.viewmodel.impl
 
 import androidx.lifecycle.ViewModel
 import androidx.paging.PagingData
+import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.state.UiState
@@ -26,6 +27,18 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
             emit(UiState.Loading)
             try {
                 val result = animeRepository.requestAnimeSeasonTimeLine().first()
+                emit(UiState.Success(result))
+            } catch (e: Exception) {
+                emit(UiState.Error(e.message ?: "未知錯誤"))
+            }
+        }
+    }
+
+    override fun requestAnimeEpisodes(animeId: String): Flow<UiState<List<AnimeEpisodeBean>>> {
+        return flow {
+            emit(UiState.Loading)
+            try {
+                val result = animeRepository.requestAnimeEpisodes(animeId).first()
                 emit(UiState.Success(result))
             } catch (e: Exception) {
                 emit(UiState.Error(e.message ?: "未知錯誤"))

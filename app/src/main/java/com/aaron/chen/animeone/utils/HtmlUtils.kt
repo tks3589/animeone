@@ -1,9 +1,39 @@
 package com.aaron.chen.animeone.utils
 
+import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeSeasonTimeLineRespVo
 import org.jsoup.Jsoup
 
 object HtmlUtils {
+    fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
+        val document = Jsoup.parse(html)
+        val videoTags = document.getElementsByTag("video")
+        val result = mutableListOf<AnimeEpisodeBean>()
+
+        if (videoTags.isEmpty()) return result
+
+        // 取得標題（例如 "某部動畫 [01]"）
+        val fullTitle = document.getElementsByClass("entry-title").firstOrNull()?.text() ?: "未知標題"
+        val titlePrefix = fullTitle.replace(Regex("\\s*\\[\\d+\\]$"), "") // 去除尾部集數標籤
+
+        for ((index, video) in videoTags.withIndex()) {
+            val apiReq = video.attr("data-apireq")
+            val episodeNumber = index + 1 // 可改用其他規則
+            val title = "$titlePrefix 第${episodeNumber}話"
+
+            result.add(
+                AnimeEpisodeBean(
+                    title = title,
+                    episode = episodeNumber,
+                    dataApireq = apiReq,
+                )
+            )
+        }
+
+        return result
+    }
+
+
     fun toAnimeTimeLineRespVo(html: String): AnimeSeasonTimeLineRespVo {
         val document = Jsoup.parse(html)
 

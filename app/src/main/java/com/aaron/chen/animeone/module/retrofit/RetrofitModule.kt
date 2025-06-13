@@ -2,7 +2,6 @@ package com.aaron.chen.animeone.module.retrofit
 
 import android.content.Context
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
-import com.aaron.chen.animeone.app.model.data.responsevo.AnimeSeasonTimeLineRespVo
 import com.aaron.chen.animeone.app.model.deserializer.AnimeListRespVoDeserializer
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
