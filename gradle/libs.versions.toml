@@ -16,12 +16,14 @@ androidx-room = "2.6.1"
 koin-bom = "3.5.6"
 koin-annotations="1.4.0"
 coil = "2.7.0"
+exoplayer = "1.7.1"
 
 [bundles]
 androidx-room = ["androidx-room-ktx", "androidx-room-runtime", "androidx-room-paging"]
 koin = ["koin-core", "koin-android", "koin-android-compat", "koin-androidx-compose", "koin-annotations"]
 retrofit = ["retrofit-main", "retrofit-mock", "retrofit-converter-gson", "retrofit-converter-scalars"]
 coil = ["coil-main", "coil-gif", "coil-compose"]
+exoplayer = ["exoplayer", "exoplayer-ui"]
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -66,6 +68,8 @@ coil-gif = { module = "io.coil-kt:coil-gif", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil"}
 material = { module = "com.google.android.material:material", version = "1.11.0" }
 jsoup = { module = "org.jsoup:jsoup", version = "1.20.1" }
+exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "exoplayer" }
+exoplayer-ui = { module = "androidx.media3:media3-ui", version.ref = "exoplayer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

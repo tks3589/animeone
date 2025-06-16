@@ -1,4 +1,5 @@
-import androidx.compose.foundation.layout.Arrangement
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,14 +23,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.state.UiState
+import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun CalendarScreen(viewModel: IAnimeoneViewModel) {
+    val context = LocalContext.current
     val uiState = remember { mutableStateOf<UiState<AnimeSeasonTimeLineBean>>(UiState.Loading) }
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
     val pagerState = rememberPagerState(initialPage = 0) {
@@ -99,6 +103,11 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clickable {
+                                            val intent = Intent(context, AnimePlayerActivity::class.java)
+                                            intent.putExtra("animeId", anime.id)
+                                            context.startActivity(intent)
+                                        }
                                         .padding(vertical = 4.dp),
                                     elevation = CardDefaults.cardElevation(4.dp)
                                 ) {

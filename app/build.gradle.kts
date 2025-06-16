@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.bundles.retrofit)
     implementation(libs.bundles.coil)
+    implementation(libs.bundles.exoplayer)
     implementation(libs.material)
     implementation(libs.gson)
     implementation(libs.androidx.paging.compose)
