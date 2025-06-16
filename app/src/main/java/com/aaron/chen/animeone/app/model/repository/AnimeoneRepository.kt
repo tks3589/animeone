@@ -7,6 +7,7 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.INITIAL_LOAD_SIZE
@@ -49,5 +50,9 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
 
     override fun requestAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {
         return animeApiModel.getAnimeEpisodes(animeId)
+    }
+
+    override fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean> {
+        return animeApiModel.requestAnimeVideo(dataRaw)
     }
 }

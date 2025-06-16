@@ -8,6 +8,7 @@ import com.aaron.chen.animeone.app.view.ui.screen.AnimePlayerScreen
 import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AnimePlayerActivity : ComponentActivity() {
@@ -15,7 +16,7 @@ class AnimePlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val animeId = intent.getStringExtra("animeId") ?: ""
+        val animeId = intent.getStringExtra("animeId") ?: DefaultConst.EMPTY_STRING
 
         setContent {
             AnimeoneTheme {

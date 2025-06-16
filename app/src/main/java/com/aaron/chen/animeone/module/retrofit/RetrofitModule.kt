@@ -3,8 +3,10 @@ package com.aaron.chen.animeone.module.retrofit
 import android.content.Context
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
 import com.aaron.chen.animeone.app.model.deserializer.AnimeListRespVoDeserializer
+import com.aaron.chen.animeone.constant.VideoConst
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitModule: KoinComponent {
     const val MAX_REQUESTS_PER_HOST: Int = 10
     const val BASE_URL: String = "https://anime1.me/"
+    const val VIDEO_API_URL: String = "https://v.anime1.me/api"
 
     private lateinit var okHttpClient: OkHttpClient
 
@@ -27,11 +30,24 @@ object RetrofitModule: KoinComponent {
 
     private fun initApi(context: Context): IRetrofitApi {
         val TIMEOUT_IN_SECS = 30L
-
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
         val okhttpClientBuilder = OkHttpClient.Builder()
             .retryOnConnectionFailure(true)
             .readTimeout(TIMEOUT_IN_SECS, TimeUnit.SECONDS)
             .connectTimeout(TIMEOUT_IN_SECS, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("Accept", "*/*")
+                    .header("Origin", BASE_URL)
+                    .header("Referer", BASE_URL)
+                    .header("User-Agent", VideoConst.USER_AGENTS_LIST.random())
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .build()
+                chain.proceed(request)
+            }
+            .addInterceptor(logging)
 
 
         okHttpClient = okhttpClientBuilder.build()

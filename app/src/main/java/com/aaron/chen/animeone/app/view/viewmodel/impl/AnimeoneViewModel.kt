@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.paging.PagingData
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
@@ -44,6 +45,10 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
                 emit(UiState.Error(e.message ?: "未知錯誤"))
             }
         }
+    }
+
+    override fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean> {
+        return animeRepository.requestAnimeVideo(dataRaw)
     }
 
 }

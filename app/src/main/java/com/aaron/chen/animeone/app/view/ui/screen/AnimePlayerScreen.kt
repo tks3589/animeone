@@ -1,5 +1,7 @@
 package com.aaron.chen.animeone.app.view.ui.screen
 
+import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -22,12 +24,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.constant.VideoConst
+import com.aaron.chen.animeone.module.retrofit.RetrofitModule
+import kotlinx.coroutines.flow.catch
 
+@OptIn(UnstableApi::class)
 @Composable
 fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
     val uiState = remember { mutableStateOf<UiState<List<AnimeEpisodeBean>>>(UiState.Loading) }
@@ -73,12 +83,27 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
 
             LaunchedEffect(selectedEpisode.value) {
                 val episode = selectedEpisode.value!!
-                // ⚠️ TODO: 這邊你要自己用 `episode.apiReq` 呼叫 API 拿到 mp4 連結
-                // 這邊示範用假資料
-//                val videoUrl = getMp4UrlFromApiReq(episode.apiReq)
-//
-//                player.setMediaItem(MediaItem.fromUri(videoUrl))
-//                player.prepare()
+                viewModel.requestAnimeVideo(episode.dataApireq)
+                    .catch {
+                        Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
+                    }
+                    .collect { video ->
+                        val videoSrc = video.src
+                        val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
+                        val mediaItem = MediaItem.fromUri(fixedUrl)
+                        val headers = mapOf(
+                            "Cookie" to video.cookie,
+                            "Referer" to RetrofitModule.BASE_URL,
+                            "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
+                        )
+                        val dataSourceFactory = DefaultHttpDataSource.Factory()
+                            .setDefaultRequestProperties(headers)
+                        val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                            .createMediaSource(mediaItem)
+                        player.setMediaSource(mediaSource)
+                        player.prepare()
+                        player.play()
+                    }
             }
         }
 

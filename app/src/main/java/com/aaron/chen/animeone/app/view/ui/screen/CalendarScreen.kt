@@ -29,6 +29,7 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
 import kotlinx.coroutines.launch
 
 @Composable
@@ -85,7 +86,7 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
-                    val currentDay = daysOfWeek.getOrNull(page) ?: ""
+                    val currentDay = daysOfWeek.getOrNull(page) ?: DefaultConst.EMPTY_STRING
                     val animeList = timelineByDay[currentDay] ?: emptyList()
 
                     if (animeList.isEmpty()) {

@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.bundles.coil)
     implementation(libs.bundles.exoplayer)
     implementation(libs.material)
+    implementation(libs.okhttp3.logging.interceptor)
     implementation(libs.gson)
     implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.paging.runtime)
