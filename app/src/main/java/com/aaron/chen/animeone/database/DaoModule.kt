@@ -26,5 +26,6 @@ class DaoModule {
         )
     }
 
-    @Factory fun animeDao(etDataBase: DataBase) = etDataBase.animeDao()
+    @Factory fun animeDao(etDataBase: DataBase) = etDataBase.animeListDao()
+    @Factory fun animeRecordDao(etDataBase: DataBase) = etDataBase.animeRecordDao()
 }

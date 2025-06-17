@@ -1,8 +1,10 @@
 package com.aaron.chen.animeone.app.view.viewmodel.impl
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
@@ -12,6 +14,7 @@ import com.aaron.chen.animeone.database.entity.AnimeEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -51,4 +54,21 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
         return animeRepository.requestAnimeVideo(dataRaw)
     }
 
+    override fun requestRecordAnimes(): Flow<UiState<List<AnimeRecordBean>>> {
+        return flow {
+            emit(UiState.Loading)
+            try {
+                val result = animeRepository.requestRecordAnimes().first()
+                emit(UiState.Success(result))
+            } catch (e: Exception) {
+                emit(UiState.Error(e.message ?: "未知錯誤"))
+            }
+        }
+    }
+
+    override suspend fun addRecordAnime(anime: AnimeRecordBean) {
+        viewModelScope.launch {
+            animeRepository.addRecordAnime(anime)
+        }
+    }
 }

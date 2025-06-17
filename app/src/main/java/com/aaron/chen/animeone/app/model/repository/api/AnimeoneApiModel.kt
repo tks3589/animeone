@@ -45,7 +45,7 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
     override fun getAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {
         val url = RetrofitModule.BASE_URL + "?cat=" + animeId
         return apiModel.getAnimeEpisodes(requestTag, url).map { html ->
-            HtmlUtils.toAnimeEpisodeList(html)
+            HtmlUtils.toAnimeEpisodeList(animeId, html)
         }
     }
 

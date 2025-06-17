@@ -30,7 +30,7 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
     ) {
         composable(Screen.Anime.route) { AnimeScreen(viewModel) }
         composable(Screen.Calendar.route) { CalendarScreen(viewModel) }
-        composable(Screen.Record.route) { RecordScreen() }
+        composable(Screen.Record.route) { RecordScreen(viewModel) }
     }
 }
 

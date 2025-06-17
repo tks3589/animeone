@@ -6,7 +6,7 @@ import com.aaron.chen.animeone.constant.DefaultConst
 import org.jsoup.Jsoup
 
 object HtmlUtils {
-    fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
+    fun toAnimeEpisodeList(id: String, html: String): List<AnimeEpisodeBean> {
         val document = Jsoup.parse(html)
         val videoTags = document.getElementsByTag("video")
         val result = mutableListOf<AnimeEpisodeBean>()
@@ -24,6 +24,7 @@ object HtmlUtils {
 
             result.add(
                 AnimeEpisodeBean(
+                    id = id,
                     title = title,
                     episode = episodeNumber,
                     dataApireq = apiReq,

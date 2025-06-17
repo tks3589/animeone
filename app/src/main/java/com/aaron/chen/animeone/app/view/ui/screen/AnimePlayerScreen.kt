@@ -31,11 +31,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import kotlinx.coroutines.flow.catch
+import kotlinx.datetime.Clock
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -82,8 +84,8 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
             )
 
             LaunchedEffect(selectedEpisode.value) {
-                val episode = selectedEpisode.value!!
-                viewModel.requestAnimeVideo(episode.dataApireq)
+                val episodeBean = selectedEpisode.value!!
+                viewModel.requestAnimeVideo(episodeBean.dataApireq)
                     .catch {
                         Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
                     }
@@ -103,6 +105,9 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
                         player.setMediaSource(mediaSource)
                         player.prepare()
                         player.play()
+
+                        val session = Clock.System.now().toEpochMilliseconds()
+                        viewModel.addRecordAnime(AnimeRecordBean(id = episodeBean.id, title = episodeBean.title, episode = episodeBean.episode, session = session))
                     }
             }
         }
@@ -123,7 +128,6 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
             }
             is UiState.Success -> {
                 val episodes = state.data
-
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()

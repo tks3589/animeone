@@ -3,6 +3,7 @@
     <string name="anime_list">動畫列表</string>
     <string name="calendar">時間表</string>
     <string name="record_list">觀看紀錄</string>
+    <string name="no_record_list">目前還沒有紀錄ㄛ</string>
     <string name="my_profile">我的檔案</string>
     <string name="event_list">活動列表</string>
 </resources>

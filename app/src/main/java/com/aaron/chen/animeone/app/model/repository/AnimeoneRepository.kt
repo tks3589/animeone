@@ -6,16 +6,21 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
+import com.aaron.chen.animeone.app.model.data.bean.toEntity
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.INITIAL_LOAD_SIZE
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.PAGE_SIZE
-import com.aaron.chen.animeone.database.dao.AnimeDao
+import com.aaron.chen.animeone.database.dao.AnimeListDao
+import com.aaron.chen.animeone.database.dao.AnimeRecordDao
 import com.aaron.chen.animeone.database.entity.AnimeEntity
+import com.aaron.chen.animeone.database.entity.toBean
 import com.aaron.chen.animeone.module.paging.remotemediator.AnimeRemoteMediator
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Factory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -28,7 +33,8 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
         enablePlaceholders = true
     )
     private var currentPagingSource: PagingSource<Int, AnimeEntity>? = null
-    private val animeDao: AnimeDao by inject()
+    private val animeDao: AnimeListDao by inject()
+    private val animeRecordDao: AnimeRecordDao by inject()
     private val animeApiModel: IAnimeoneApiModel by inject()
     private val animeRemoteMediator = AnimeRemoteMediator(animeDao, animeApiModel)
 
@@ -54,5 +60,15 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
 
     override fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean> {
         return animeApiModel.requestAnimeVideo(dataRaw)
+    }
+
+    override fun requestRecordAnimes(): Flow<List<AnimeRecordBean>> {
+        return animeRecordDao.getAll().map { entity ->
+            entity.toBean()
+        }
+    }
+
+    override suspend fun addRecordAnime(anime: AnimeRecordBean) {
+        return animeRecordDao.insert(anime.toEntity())
     }
 }

@@ -8,7 +8,7 @@ import androidx.room.Query
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 
 @Dao
-interface AnimeDao {
+interface AnimeListDao {
     @Query("SELECT * FROM ${AnimeEntity.TABLE_NAME}")
     fun getAll(): PagingSource<Int, AnimeEntity>
 

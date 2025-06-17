@@ -2,6 +2,7 @@ package com.aaron.chen.animeone.app.model.repository.impl
 
 import androidx.paging.PagingData
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.database.entity.AnimeEntity
@@ -16,4 +17,6 @@ interface IAnimeoneRepository {
     fun requestAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean>
     fun requestAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>>
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
+    fun requestRecordAnimes(): Flow<List<AnimeRecordBean>>
+    suspend fun addRecordAnime(anime: AnimeRecordBean)
 }

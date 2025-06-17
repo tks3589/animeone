@@ -9,7 +9,7 @@ import androidx.room.withTransaction
 import com.aaron.chen.animeone.app.model.data.bean.AnimeBean
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.database.DataBase
-import com.aaron.chen.animeone.database.dao.AnimeDao
+import com.aaron.chen.animeone.database.dao.AnimeListDao
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -18,7 +18,7 @@ import org.koin.core.component.inject
 
 @OptIn(ExperimentalPagingApi::class)
 class AnimeRemoteMediator(
-    private val animeDao: AnimeDao,
+    private val animeDao: AnimeListDao,
     private val animeApiModel: IAnimeoneApiModel
 ): RemoteMediator<Int, AnimeEntity>(), KoinComponent {
     private val logTag = AnimeRemoteMediator::class.java.simpleName
