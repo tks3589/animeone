@@ -1,4 +1,6 @@
 import android.content.Intent
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +33,9 @@ import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CalendarScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
@@ -41,6 +45,14 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
         daysOfWeek.size
     }
     val coroutineScope = rememberCoroutineScope()
+    val todayIndex = remember {
+        val dayOfWeek = LocalDate.now().dayOfWeek.value // 1 (Monday) to 7 (Sunday)
+        (dayOfWeek - 1).coerceIn(0, 6) // 對應到你 daysOfWeek 的 index（0~6）
+    }
+
+    LaunchedEffect(Unit) {
+        pagerState.scrollToPage(todayIndex)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.requestAnimeSeasonTimeLine()

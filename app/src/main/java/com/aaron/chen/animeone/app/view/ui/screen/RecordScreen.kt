@@ -1,6 +1,8 @@
 package com.aaron.chen.animeone.app.view.ui.screen
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,11 +31,23 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @Composable
 fun RecordScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
     val uiState = remember { mutableStateOf<UiState<List<AnimeRecordBean>>>(UiState.Loading) }
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // 回傳後觸發刷新
+        viewModel.requestRecordAnimes().onEach {
+            uiState.value = it
+        }.launchIn(scope)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.requestRecordAnimes()
             .collect { uiState.value = it }
@@ -68,7 +83,8 @@ fun RecordScreen(viewModel: IAnimeoneViewModel) {
                                     .clickable {
                                         val intent = Intent(context, AnimePlayerActivity::class.java)
                                         intent.putExtra("animeId", anime.id)
-                                        context.startActivity(intent)
+                                        intent.putExtra("episode", anime.episode)
+                                        launcher.launch(intent)
                                     }
                                     .padding(vertical = 4.dp),
                                 elevation = CardDefaults.cardElevation(4.dp)

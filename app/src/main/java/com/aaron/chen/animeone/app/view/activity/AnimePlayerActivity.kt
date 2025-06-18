@@ -17,10 +17,11 @@ class AnimePlayerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val animeId = intent.getStringExtra("animeId") ?: DefaultConst.EMPTY_STRING
+        val episode = intent.getIntExtra("episode", 1)
 
         setContent {
             AnimeoneTheme {
-                AnimePlayerScreen(viewModel = viewModel, animeId = animeId)
+                AnimePlayerScreen(viewModel = viewModel, animeId = animeId, episode = episode)
             }
         }
     }

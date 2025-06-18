@@ -44,7 +44,7 @@ import kotlinx.datetime.Clock
 
 @OptIn(UnstableApi::class)
 @Composable
-fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
+fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String, episode: Int) {
     val uiState = remember { mutableStateOf<UiState<List<AnimeEpisodeBean>>>(UiState.Loading) }
     val context = LocalContext.current
 
@@ -66,7 +66,8 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
             .collect {
                 uiState.value = it
                 if (it is UiState.Success && it.data.isNotEmpty()) {
-                    selectedEpisode.value = it.data.first()
+                    selectedEpisode.value = it.data.firstOrNull { ep -> ep.episode == episode }
+                        ?: it.data.first() // 如果指定的集數不存在，則選擇第一集
                 }
             }
     }
