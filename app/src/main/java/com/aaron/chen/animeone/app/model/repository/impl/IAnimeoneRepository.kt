@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface IAnimeoneRepository {
     companion object {
         const val PAGE_SIZE = 50
-        const val INITIAL_LOAD_SIZE = PAGE_SIZE * 2
+        const val INITIAL_LOAD_SIZE = PAGE_SIZE * 40
     }
     fun requestAnimes(): Flow<PagingData<AnimeEntity>>
     fun requestAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean>

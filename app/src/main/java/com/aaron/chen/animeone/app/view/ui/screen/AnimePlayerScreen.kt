@@ -5,10 +5,13 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,7 +71,9 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
             }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(WindowInsets.statusBars.asPaddingValues())) {
         // Player Section
         if (selectedEpisode.value != null) {
             AndroidView(
@@ -107,7 +112,8 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
                         player.play()
 
                         val session = Clock.System.now().toEpochMilliseconds()
-                        viewModel.addRecordAnime(AnimeRecordBean(id = episodeBean.id, title = episodeBean.title, episode = episodeBean.episode, session = session))
+                        val title = "${episodeBean.title} 第 ${episodeBean.episode} 話"
+                        viewModel.addRecordAnime(AnimeRecordBean(id = episodeBean.id, title = title, episode = episodeBean.episode, session = session))
                     }
             }
         }
@@ -128,6 +134,14 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String) {
             }
             is UiState.Success -> {
                 val episodes = state.data
+                selectedEpisode.value?.let { episode ->
+                    Text(
+                        text = "${episode.title} - 第 ${episode.episode} 話",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()

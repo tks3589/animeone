@@ -20,7 +20,7 @@ object HtmlUtils {
         for ((index, video) in videoTags.withIndex()) {
             val apiReq = video.attr("data-apireq")
             val episodeNumber = index + 1 // 可改用其他規則
-            val title = "$titlePrefix 第${episodeNumber}話"
+            val title = titlePrefix
 
             result.add(
                 AnimeEpisodeBean(

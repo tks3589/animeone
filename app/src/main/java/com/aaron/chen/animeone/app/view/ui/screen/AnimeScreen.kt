@@ -14,17 +14,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -41,13 +49,21 @@ fun AnimeScreen(
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimes().collectAsLazyPagingItems()
 
+    var searchQuery by remember { mutableStateOf("") }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(24.dp)
         ) {
-            Text(
-                text = stringResource(R.string.anime_list),
-                style = MaterialTheme.typography.titleMedium
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("搜尋動畫名稱") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -55,15 +71,15 @@ fun AnimeScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(animeItems.itemCount) { index ->
-                    val anime = animeItems[index]
-                    if (anime != null) {
-                        AnimeItem(anime, onClick = {
-                            val intent = Intent(context, AnimePlayerActivity::class.java)
-                            intent.putExtra("animeId", anime.id)
-                            context.startActivity(intent)
-                        })
-                    }
+                val filteredItems = animeItems.itemSnapshotList.items.filter {
+                    searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true)
+                }
+                items(filteredItems) { anime ->
+                    AnimeItem(anime, onClick = {
+                        val intent = Intent(context, AnimePlayerActivity::class.java)
+                        intent.putExtra("animeId", anime.id)
+                        context.startActivity(intent)
+                    })
                 }
 
                 animeItems.apply {
