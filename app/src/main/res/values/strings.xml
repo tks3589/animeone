@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Animeone</string>
+    <string name="app_name">mxAnime</string>
     <string name="anime_list">動畫列表</string>
     <string name="calendar">時間表</string>
     <string name="record_list">觀看紀錄</string>
