@@ -30,6 +30,8 @@
 
         <activity
             android:name=".app.view.activity.AnimePlayerActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Animeone"/>
 
     </application>
