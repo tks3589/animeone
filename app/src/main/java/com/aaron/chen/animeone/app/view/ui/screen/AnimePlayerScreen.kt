@@ -1,6 +1,7 @@
 package com.aaron.chen.animeone.app.view.ui.screen
 
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.view.WindowManager
 import android.widget.Toast
@@ -25,10 +26,14 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -230,15 +236,39 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String, episode: I
 
         if (!isFullscreen.value) {
             selectedEpisode.value?.let { episode ->
-                Text(
-                    text = "${episode.title} - 第 ${episode.episode} 話",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.background)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${episode.title} - 第 ${episode.episode} 話",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
+                    )
+
+                    IconButton(
+                        onClick = {
+                            val shareText = "${episode.title} - 第 ${episode.episode} 話\n${RetrofitModule.BASE_URL}${episode.id}"
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "分享到"))
+                        },
+                        modifier = Modifier.size(20.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "分享",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                    }
+                }
             }
 
             LazyColumn(
