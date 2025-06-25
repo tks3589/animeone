@@ -53,8 +53,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -77,7 +75,7 @@ import kotlinx.datetime.Clock
 
 @OptIn(UnstableApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String, episode: Int) {
+fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int) {
     val episodeLoadState = remember { mutableStateOf<UiState<List<AnimeEpisodeBean>>>(UiState.Loading) }
     val commentsLoadState = remember { mutableStateOf<UiState<List<AnimeCommentBean>>>(UiState.Loading) }
     val context = LocalContext.current
@@ -86,20 +84,13 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String, episode: I
 
     val selectedEpisode = remember { mutableStateOf<AnimeEpisodeBean?>(null) }
     val isFullscreen = remember { mutableStateOf(false) }
-    val wasPlayingBeforePause = remember { mutableStateOf(false) }
     val isVideoBuffering = remember { mutableStateOf(true) } // 新增：影片緩衝狀態
 
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            playWhenReady = true
-            // 新增：監聽播放器狀態
-            addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
-                }
-            })
+   player.addListener(object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
         }
-    }
+    })
 
     // --- 新增的保持螢幕開啟邏輯 ---
     val currentActivity = context as? ComponentActivity
@@ -112,32 +103,11 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, animeId: String, episode: I
     // --- 保持螢幕開啟邏輯結束 ---
 
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> {
-                    if (player.isPlaying) {
-                        wasPlayingBeforePause.value = true
-                        player.pause()
-                    } else {
-                        wasPlayingBeforePause.value = false
-                    }
-                }
-                Lifecycle.Event.ON_RESUME -> {
-//                    if (wasPlayingBeforePause.value) {
-//                        player.play()
-//                    }
-                }
-                else -> { /* 其他生命週期事件無需處理 */ }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-
         onDispose {
             player.release()
             if (isFullscreen.value && activity != null) {
                 toggleFullscreen(activity, false)
             }
-            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
