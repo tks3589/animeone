@@ -1,5 +1,6 @@
 package com.aaron.chen.animeone.module.retrofit
 
+import com.aaron.chen.animeone.app.model.data.responsevo.AnimeCommentRespVo
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeVideoRespVo
 import com.aaron.chen.animeone.constant.ApiConst.HEADER_VALUE_REQUEST_TAG
@@ -23,4 +24,7 @@ interface IRetrofitApi {
 
     @POST
     fun requestAnimeVideo(@Header(HEADER_VALUE_REQUEST_TAG) requestTag: String,  @Url url: String, @Body requestBody: RequestBody): RetrofitFlow<AnimeVideoRespVo>
+
+    @GET
+    fun requestComments(@Header(HEADER_VALUE_REQUEST_TAG) requestTag: String,  @Url url: String): Flow<AnimeCommentRespVo>
 }

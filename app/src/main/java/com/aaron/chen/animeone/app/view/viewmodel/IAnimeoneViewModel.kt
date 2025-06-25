@@ -1,6 +1,7 @@
 package com.aaron.chen.animeone.app.view.viewmodel
 
 import androidx.paging.PagingData
+import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
@@ -16,4 +17,5 @@ interface IAnimeoneViewModel {
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
     fun requestRecordAnimes(): Flow<UiState<List<AnimeRecordBean>>>
     suspend fun addRecordAnime(anime: AnimeRecordBean)
+    fun requestAnimeComments(animeId: String): Flow<UiState<List<AnimeCommentBean>>>
 }

@@ -41,18 +41,12 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
     val uiState = remember { mutableStateOf<UiState<AnimeSeasonTimeLineBean>>(UiState.Loading) }
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
-    val pagerState = rememberPagerState(initialPage = 0) {
-        daysOfWeek.size
-    }
     val coroutineScope = rememberCoroutineScope()
-    val todayIndex = remember {
-        val dayOfWeek = LocalDate.now().dayOfWeek.value // 1 (Monday) to 7 (Sunday)
-        (dayOfWeek - 1).coerceIn(0, 6) // 對應到你 daysOfWeek 的 index（0~6）
-    }
-
-    LaunchedEffect(Unit) {
-        pagerState.scrollToPage(todayIndex)
-    }
+    val todayIndex = (LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6)
+    val pagerState = rememberPagerState(
+        initialPage = todayIndex,
+        pageCount = { daysOfWeek.size }
+    )
 
     LaunchedEffect(Unit) {
         viewModel.requestAnimeSeasonTimeLine()
@@ -86,7 +80,7 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                             selected = pagerState.currentPage == index,
                             onClick = {
                                 coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
+                                    pagerState.scrollToPage(index)
                                 }
                             },
                             text = { Text(day) }

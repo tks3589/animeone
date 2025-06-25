@@ -3,7 +3,6 @@ package com.aaron.chen.animeone.module.retrofit
 import android.content.Context
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeListRespVo
 import com.aaron.chen.animeone.app.model.deserializer.AnimeListRespVoDeserializer
-import com.aaron.chen.animeone.constant.VideoConst
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -20,6 +19,8 @@ object RetrofitModule: KoinComponent {
     const val MAX_REQUESTS_PER_HOST: Int = 10
     const val BASE_URL: String = "https://anime1.me/"
     const val VIDEO_API_URL: String = "https://v.anime1.me/api"
+    const val ANIME_LIST_URL = "https://d1zquzjgwo9yb.cloudfront.net/"
+    const val COMMENTS_URL = "https://disqus.com/api/3.0/threads/listPosts.json?api_key=${ApiKey.DISQUS}&forum=anime1tk"
 
     private lateinit var okHttpClient: OkHttpClient
 
@@ -37,16 +38,6 @@ object RetrofitModule: KoinComponent {
             .retryOnConnectionFailure(true)
             .readTimeout(TIMEOUT_IN_SECS, TimeUnit.SECONDS)
             .connectTimeout(TIMEOUT_IN_SECS, TimeUnit.SECONDS)
-            .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .header("Accept", "*/*")
-                    .header("Origin", BASE_URL)
-                    .header("Referer", BASE_URL)
-                    .header("User-Agent", VideoConst.USER_AGENTS_LIST.random())
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .build()
-                chain.proceed(request)
-            }
             .addInterceptor(logging)
 
 

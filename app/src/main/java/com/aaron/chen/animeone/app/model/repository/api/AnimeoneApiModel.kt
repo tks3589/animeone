@@ -2,11 +2,14 @@ package com.aaron.chen.animeone.app.model.repository.api
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import com.aaron.chen.animeone.app.model.data.bean.AnimeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.data.responsevo.toAnimeList
+import com.aaron.chen.animeone.app.model.data.responsevo.toCommentList
 import com.aaron.chen.animeone.app.model.data.responsevo.toTimeLine
 import com.aaron.chen.animeone.app.model.data.responsevo.toVideo
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
@@ -26,10 +29,9 @@ import org.koin.core.component.inject
 class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
     private val apiModel: IRetrofitApi by inject()
     private val requestTag = this::class.java.simpleName
-    private val animeListUrl = "https://d1zquzjgwo9yb.cloudfront.net/"
 
     override fun getAnimeList(): Flow<List<AnimeBean>> {
-        return apiModel.getAnimeList(requestTag, animeListUrl).map { vo ->
+        return apiModel.getAnimeList(requestTag, RetrofitModule.ANIME_LIST_URL).map { vo ->
             vo.toAnimeList()
         }
     }
@@ -45,7 +47,7 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
     override fun getAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {
         val url = RetrofitModule.BASE_URL + "?cat=" + animeId
         return apiModel.getAnimeEpisodes(requestTag, url).map { html ->
-            HtmlUtils.toAnimeEpisodeList(animeId, html)
+            HtmlUtils.toAnimeEpisodeList(html)
         }
     }
 
@@ -56,7 +58,7 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
         return apiModel.requestAnimeVideo(requestTag, url, requestBody).map { response ->
             val allCookies= response.headers().values("Set-Cookie")
             val filteredCookie = allCookies.mapNotNull { cookie ->
-                val parts = cookie.toString().split(";")[0].split("=")
+                val parts = cookie.split(";")[0].split("=")
                 if (parts.size == 2) {
                     val key = parts[0]
                     val value = parts[1]
@@ -70,11 +72,22 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
                 }
             }.joinToString("; ")
 
-            if (filteredCookie.isEmpty() == true) {
+            if (filteredCookie.isEmpty()) {
                 throw Exception("No valid cookies found")
             } else {
-                response.body()?.toVideo(filteredCookie.toString()) ?: throw Exception("Response body is null")
+                response.body()?.toVideo(filteredCookie) ?: throw Exception("Response body is null")
             }
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun requestComments(animeId: String): Flow<List<AnimeCommentBean>> {
+        val url = RetrofitModule.COMMENTS_URL.toUri().buildUpon()
+            .appendQueryParameter("thread", "link:${RetrofitModule.BASE_URL}$animeId")
+            .build()
+            .toString()
+
+        return apiModel.requestComments(requestTag, url)
+            .map { it.toCommentList() }
     }
 }

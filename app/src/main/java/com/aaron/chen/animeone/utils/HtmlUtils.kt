@@ -6,9 +6,10 @@ import com.aaron.chen.animeone.constant.DefaultConst
 import org.jsoup.Jsoup
 
 object HtmlUtils {
-    fun toAnimeEpisodeList(id: String, html: String): List<AnimeEpisodeBean> {
+    fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
         val document = Jsoup.parse(html)
-        val videoTags = document.getElementsByTag("video")
+        val articles = document.getElementsByTag("article").reversed()
+        val videoTags = document.getElementsByTag("video").reversed()
         val result = mutableListOf<AnimeEpisodeBean>()
 
         if (videoTags.isEmpty()) return result
@@ -19,12 +20,13 @@ object HtmlUtils {
 
         for ((index, video) in videoTags.withIndex()) {
             val apiReq = video.attr("data-apireq")
-            val episodeNumber = index + 1 // 可改用其他規則
+            val episodeNumber = index + 1
             val title = titlePrefix
+            val animeId = articles[index].attr("id").substringAfter("post-")
 
             result.add(
                 AnimeEpisodeBean(
-                    id = id,
+                    id = animeId,
                     title = title,
                     episode = episodeNumber,
                     dataApireq = apiReq,

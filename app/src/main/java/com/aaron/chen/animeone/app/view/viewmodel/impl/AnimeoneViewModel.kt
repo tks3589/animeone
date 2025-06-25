@@ -3,6 +3,7 @@ package com.aaron.chen.animeone.app.view.viewmodel.impl
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
+import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
@@ -33,7 +34,7 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
                 val result = animeRepository.requestAnimeSeasonTimeLine().first()
                 emit(UiState.Success(result))
             } catch (e: Exception) {
-                emit(UiState.Error(e.message ?: "未知錯誤"))
+                emit(UiState.Error(e.message))
             }
         }
     }
@@ -45,7 +46,7 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
                 val result = animeRepository.requestAnimeEpisodes(animeId).first()
                 emit(UiState.Success(result))
             } catch (e: Exception) {
-                emit(UiState.Error(e.message ?: "未知錯誤"))
+                emit(UiState.Error(e.message))
             }
         }
     }
@@ -61,7 +62,7 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
                 val result = animeRepository.requestRecordAnimes().first()
                 emit(UiState.Success(result))
             } catch (e: Exception) {
-                emit(UiState.Error(e.message ?: "未知錯誤"))
+                emit(UiState.Error(e.message))
             }
         }
     }
@@ -69,6 +70,18 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
     override suspend fun addRecordAnime(anime: AnimeRecordBean) {
         viewModelScope.launch {
             animeRepository.addRecordAnime(anime)
+        }
+    }
+
+    override fun requestAnimeComments(animeId: String): Flow<UiState<List<AnimeCommentBean>>> {
+        return flow {
+            emit(UiState.Loading)
+            try {
+                val result = animeRepository.requestAnimeComments(animeId).first()
+                emit(UiState.Success(result))
+            } catch (e: Exception) {
+                emit(UiState.Error(e.message))
+            }
         }
     }
 }

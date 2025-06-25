@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
+import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
@@ -66,6 +67,10 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
         return animeRecordDao.getAll().map { entity ->
             entity.toBean()
         }
+    }
+
+    override fun requestAnimeComments(animeId: String): Flow<List<AnimeCommentBean>> {
+        return animeApiModel.requestComments(animeId)
     }
 
     override suspend fun addRecordAnime(anime: AnimeRecordBean) {
