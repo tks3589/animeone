@@ -13,36 +13,36 @@ import com.google.gson.annotations.SerializedName
 
 class AnimeCommentRespVo{
     @SerializedName("response")
-    val data: List<CommentRespVo>? = null
+    var data: List<CommentRespVo>? = null
         get() = field ?: emptyList()
 }
 class CommentRespVo {
     @SerializedName("id")
-    val id: String? = null
+    var id: String? = null
         get() = field.orEmpty()
 
     @SerializedName("createdAt")
-    val createdAt: String? = null
+    var createdAt: String? = null
         get() = field.orEmpty()
 
     @SerializedName("raw_message")
-    val message: String? = null
+    var message: String? = null
         get() = field.orEmpty()
 
     @SerializedName("likes")
-    val likes: Int? = null
+    var likes: Int? = null
         get() = field ?: DefaultConst.INT_COUNT
 
     @SerializedName("dislikes")
-    val dislikes: Int? = null
+    var dislikes: Int? = null
         get() = field ?: DefaultConst.INT_COUNT
 
     @SerializedName("media")
-    val media: List<MediaVo>? = null
+    var media: List<MediaVo>? = null
         get() = field ?: emptyList()
 
     @SerializedName("author")
-    val user: UserVo? = null
+    var user: UserVo? = null
         get() = field ?: UserVo()
 
 

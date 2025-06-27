@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 
 class AnimeListRespVo {
     @SerializedName("animes")
-    val animes: List<AnimeRespVo>? = null
+    var animes: List<AnimeRespVo>? = null
         get() = field ?: emptyList()
 
     class AnimeRespVo {

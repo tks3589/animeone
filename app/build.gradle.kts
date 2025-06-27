@@ -36,12 +36,26 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
+    }
     buildFeatures {
         compose = true
     }
+
+    packagingOptions.resources.excludes += setOf(
+        "META-INF/LICENSE*",
+        "META-INF/AL2.0",
+        "META-INF/LGPL2.1",
+        "META-INF/licenses/ASM",
+        "**/attach_hotspot_windows.dll"
+    )
 }
 
 dependencies {
+    implementation(kotlin("reflect", libs.versions.kotlin.get()))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -54,6 +68,7 @@ dependencies {
     implementation(libs.bundles.retrofit)
     implementation(libs.bundles.coil)
     implementation(libs.bundles.exoplayer)
+    api(libs.bundles.kotest)
     implementation(libs.material)
     implementation(libs.okhttp3.logging.interceptor)
     implementation(libs.kotlin.datetime)
@@ -62,11 +77,13 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.bundles.androidx.room)
     implementation(libs.jsoup)
+    api(libs.turbine)
     api(platform(libs.koin.bom))
     api(libs.bundles.koin)
     ksp(libs.koin.ksp.compiler)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
+    testImplementation(libs.mockk.main)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
