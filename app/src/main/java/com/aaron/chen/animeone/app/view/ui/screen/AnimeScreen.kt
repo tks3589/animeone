@@ -39,6 +39,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
+import com.aaron.chen.animeone.app.view.ui.widget.PullToRefresh
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 
@@ -68,31 +69,36 @@ fun AnimeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            PullToRefresh(
+                isRefreshing = animeItems.loadState.refresh is LoadState.Loading,
+                onRefresh = { animeItems.refresh() },
             ) {
-                val filteredItems = animeItems.itemSnapshotList.items.filter {
-                    searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true)
-                }
-                items(filteredItems) { anime ->
-                    AnimeItem(anime, onClick = {
-                        val intent = Intent(context, AnimePlayerActivity::class.java)
-                        intent.putExtra("animeId", anime.id)
-                        context.startActivity(intent)
-                    })
-                }
-
-                animeItems.apply {
-                    when {
-                        loadState.refresh is LoadState.Loading -> {
-                            item { Text("載入中...") }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when (val state = animeItems.loadState.refresh) {
+                        is LoadState.Error -> {
+                            item {
+                                Text(
+                                    text = "載入失敗: ${state.error.localizedMessage}",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                )
+                            }
                         }
-                        loadState.append is LoadState.Loading -> {
-                            item { Text("載入更多中...") }
-                        }
-                        loadState.refresh is LoadState.Error -> {
-                            val e = loadState.refresh as LoadState.Error
-                            item { Text("載入失敗: ${e.error.localizedMessage}") }
+                        else -> {
+                            val filteredItems = animeItems.itemSnapshotList.items.filter {
+                                searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true)
+                            }
+                            items(filteredItems) { anime ->
+                                AnimeItem(anime, onClick = {
+                                    val intent = Intent(context, AnimePlayerActivity::class.java)
+                                    intent.putExtra("animeId", anime.id)
+                                    context.startActivity(intent)
+                                })
+                            }
                         }
                     }
                 }
