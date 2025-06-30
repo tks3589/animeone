@@ -10,7 +10,6 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,6 +38,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -73,34 +74,37 @@ import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import kotlinx.coroutines.flow.catch
 import kotlinx.datetime.Clock
 
-@OptIn(UnstableApi::class, ExperimentalLayoutApi::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int) {
-    val episodeLoadState = remember { mutableStateOf<UiState<List<AnimeEpisodeBean>>>(UiState.Loading) }
-    val commentsLoadState = remember { mutableStateOf<UiState<List<AnimeCommentBean>>>(UiState.Loading) }
+    val episodeLoadState = viewModel.episodeState.collectAsState(UiState.Idle)
+    val commentsLoadState = viewModel.commentState.collectAsState(UiState.Idle)
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
-
     val selectedEpisode = remember { mutableStateOf<AnimeEpisodeBean?>(null) }
     val isFullscreen = remember { mutableStateOf(false) }
-    val isVideoBuffering = remember { mutableStateOf(true) } // 新增：影片緩衝狀態
+    val isVideoBuffering = remember { mutableStateOf(true) }
 
-   player.addListener(object : Player.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
+            }
         }
-    })
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+        }
+    }
 
-    // --- 新增的保持螢幕開啟邏輯 ---
     val currentActivity = context as? ComponentActivity
-    DisposableEffect(currentActivity) { // 當 Activity 改變時重新執行
+    DisposableEffect(currentActivity) {
         currentActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
             currentActivity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
-    // --- 保持螢幕開啟邏輯結束 ---
 
     DisposableEffect(lifecycleOwner) {
         onDispose {
@@ -119,13 +123,13 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
 
     LaunchedEffect(Unit) {
         viewModel.requestAnimeEpisodes(animeId)
-            .collect {
-                episodeLoadState.value = it
-                if (it is UiState.Success && it.data.isNotEmpty()) {
-                    selectedEpisode.value = it.data.firstOrNull { ep -> ep.episode == episode }
-                        ?: it.data.first()
-                }
-            }
+    }
+
+    LaunchedEffect(episodeLoadState.value) {
+        val state = episodeLoadState.value
+        if (state is UiState.Success && state.data.isNotEmpty()) {
+            selectedEpisode.value = state.data.firstOrNull { ep -> ep.episode == episode } ?: state.data.first()
+        }
     }
 
     Column(
@@ -135,7 +139,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     ) {
         // Player Section
         if (selectedEpisode.value != null) {
-            Box( // 使用 Box 來疊加 PlayerView 和 Loading 指示器
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isFullscreen.value) Modifier.weight(1f) else Modifier.aspectRatio(16 / 9f))
@@ -150,10 +154,9 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxSize() // 讓 PlayerView 填滿 Box
+                    modifier = Modifier.fillMaxSize()
                 )
 
-                // 影片緩衝時顯示 Loading Progress
                 if (isVideoBuffering.value) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -164,15 +167,13 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                 }
             }
 
-
             LaunchedEffect(selectedEpisode.value) {
                 val episodeBean = selectedEpisode.value!!
-                // 重置緩衝狀態，因為要載入新影片了
                 isVideoBuffering.value = true
                 viewModel.requestAnimeVideo(episodeBean.dataApireq)
                     .catch {
                         Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
-                        isVideoBuffering.value = false // 載入失敗也停止緩衝指示
+                        isVideoBuffering.value = false
                     }
                     .collect { video ->
                         val videoSrc = video.src
@@ -198,150 +199,128 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
 
                 //loading comments
                 viewModel.requestAnimeComments(episodeBean.id)
-                    .collect {
-                        commentsLoadState.value = it
-                    }
             }
-        }
 
-        if (!isFullscreen.value) {
-            selectedEpisode.value?.let { episode ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${episode.title} - 第 ${episode.episode} 話",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
-                    )
+            if (!isFullscreen.value) {
+                selectedEpisode.value?.let { episode ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${episode.title} - 第 ${episode.episode} 話",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
+                        )
 
-                    IconButton(
-                        onClick = {
-                            val shareText = "${episode.title} - 第 ${episode.episode} 話\n${RetrofitModule.BASE_URL}${episode.id}"
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "分享到"))
-                        },
-                        modifier = Modifier.size(20.dp)) {
+                        IconButton(
+                            onClick = {
+                                val shareText = "${episode.title} - 第 ${episode.episode} 話\n${RetrofitModule.BASE_URL}${episode.id}"
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "分享到"))
+                            },
+                            modifier = Modifier.size(20.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "分享",
                                 tint = MaterialTheme.colorScheme.primary
                             )
+                        }
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    item {
+                        EpisodeSection((episodeLoadState.value as? UiState.Success), selectedEpisode)
+                    }
+                    item {
+                        CommentSection(commentsLoadState.value)
                     }
                 }
             }
+        } else if (episodeLoadState.value is UiState.Error || episodeLoadState.value is UiState.Empty) {
+            ErrorText()
+        } else {
+           LoadingText()
+        }
+    }
+}
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
+
+@Composable
+private fun EpisodeSection(state: UiState.Success<List<AnimeEpisodeBean>>?, selectedEpisode: MutableState<AnimeEpisodeBean?>) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        maxItemsInEachRow = 4
+    ) {
+        state?.data?.forEach { episode ->
+            val isSelected = episode == selectedEpisode.value
+            Button(
+                onClick = { selectedEpisode.value = episode },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                // 集數按鈕區塊
-                item {
-                    when (val state = episodeLoadState.value) {
-                        is UiState.Loading -> {
-                            Box(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.loading_text),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        is UiState.Error -> {
-                            Box(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${stringResource(R.string.error_text)}：${state.message}",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                        is UiState.Success -> {
-                            FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                maxItemsInEachRow = 4
-                            ) {
-                                state.data.forEach { episode ->
-                                    val isSelected = episode == selectedEpisode.value
-                                    Button(
-                                        onClick = { selectedEpisode.value = episode },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isSelected)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                    ) {
-                                        Text("第 ${episode.episode} 話")
-                                    }
-                                }
-                            }
+                Text("第 ${episode.episode} 話")
+            }
+        }
+    }
+}
 
+@Composable
+private fun CommentSection(commentState: UiState<List<AnimeCommentBean>>) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "留言板",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-                        }
-                    }
-                }
-                if (episodeLoadState.value is UiState.Success) {
-                    // 留言區塊
-                    item {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "留言板",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+        when (commentState) {
+            is UiState.Idle,
+            is UiState.Loading -> {
+                Text(
+                    text = stringResource(R.string.loading_text),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            is UiState.Empty -> {}
+            is UiState.Error -> {
+                Text(
+                    text = "${stringResource(R.string.error_text)}：${commentState.message}",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
 
-                            when (val commentState = commentsLoadState.value) {
-                                is UiState.Loading -> {
-                                    Text(
-                                        text = stringResource(R.string.loading_text),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                is UiState.Error -> {
-                                    Text(
-                                        text = "${stringResource(R.string.error_text)}：${commentState.message}",
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-
-                                is UiState.Success -> {
-                                    if (commentState.data.isEmpty()) {
-                                        Text(
-                                            text = stringResource(R.string.no_comment_list),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    } else {
-                                        commentState.data.forEach { comment ->
-                                            CommentItem(comment)
-                                            Divider(modifier = Modifier.padding(vertical = 8.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            is UiState.Success -> {
+                if (commentState.data.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.no_comment_list),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    commentState.data.forEach { comment ->
+                        CommentItem(comment)
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
             }
@@ -349,7 +328,38 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     }
 }
 
-// 輔助函數：切換全螢幕模式
+@Composable
+private fun LoadingText() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.loading_text),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ErrorText(message: String? = null) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.error_text),
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+
 @OptIn(UnstableApi::class)
 private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
     val window = activity.window

@@ -20,14 +20,13 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
@@ -39,7 +38,7 @@ import java.time.LocalDate
 @Composable
 fun CalendarScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
-    val uiState = remember { mutableStateOf<UiState<AnimeSeasonTimeLineBean>>(UiState.Loading) }
+    val uiState = viewModel.timeLineState.collectAsState(UiState.Idle)
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
     val coroutineScope = rememberCoroutineScope()
     val todayIndex = (LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6)
@@ -50,15 +49,18 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
 
     LaunchedEffect(Unit) {
         viewModel.requestAnimeSeasonTimeLine()
-            .collect { uiState.value = it }
     }
 
     when (val state = uiState.value) {
+        is UiState.Idle -> {
+            // 初始狀態，無需顯示任何內容
+        }
         is UiState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
+        is UiState.Empty -> {}
         is UiState.Error -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = "載入失敗：${state.message}", color = MaterialTheme.colorScheme.error)
