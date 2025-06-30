@@ -35,12 +35,21 @@
 
 - 影片編輯模式 (截圖、GIF convert、片段收藏) 
 - 離線影片快取與播放  
+- 留言功能
 
 
 
 ## 🚀 開始使用
 
+你可以選擇以下兩種方式體驗 App：
+
+### ✅ 方式一：本地建置
+
 ```bash
 git clone https://github.com/tks3589/animeone.git
 cd animeone
 ./gradlew installDebug
+```
+
+### 📦 方式二：下載 APK
+👉 [點我下載 APK](https://drive.google.com/file/d/17AloTsZafuCQCu41Ni6QZSi__ZO7_RGY/view)
