@@ -3,6 +3,7 @@ package com.aaron.chen.animeone.app.view.viewmodel.impl
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
@@ -24,7 +25,7 @@ import org.koin.core.component.inject
 class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
     private val animeRepository: IAnimeoneRepository by inject()
     override fun requestAnimes(): Flow<PagingData<AnimeEntity>> {
-        return animeRepository.requestAnimes()
+        return animeRepository.requestAnimes().cachedIn(viewModelScope)
     }
 
     override fun requestAnimeSeasonTimeLine(): Flow<UiState<AnimeSeasonTimeLineBean>> {

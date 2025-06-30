@@ -49,7 +49,6 @@ fun AnimeScreen(
 ) {
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimes().collectAsLazyPagingItems()
-
     var searchQuery by remember { mutableStateOf("") }
 
     Surface(modifier = Modifier.fillMaxSize()) {
