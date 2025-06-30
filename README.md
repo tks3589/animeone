@@ -14,9 +14,9 @@
 
 ## 🖼️ 截圖展示
 
-| 動畫列表 | 播放畫面 | 動畫季度表 | 收藏畫面 |
+| 動畫列表 | 播放畫面 | 動畫季度表 | 觀看紀錄 |
 |----------|----------|------------|----------|
-| ![list](screenshots/list.png) | ![detail](screenshots/detail.png) | ![season](screenshots/season.png) | ![favorite](screenshots/favorite.png) |
+| ![list](screenshots/list.jpg) | ![detail](screenshots/player.jpg) | ![season](screenshots/season.jpg) | ![favorite](screenshots/record.jpg) |
 
 ## 🧱 技術架構
 
