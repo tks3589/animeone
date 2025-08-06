@@ -48,7 +48,7 @@ object HtmlUtils {
 
         val timeline = mutableListOf<AnimeSeasonTimeLineRespVo.AnimeLiteRespVo>()
 
-        val rows = table?.select("tbody > tr")
+        val rows = table?.select("tbody > tr")?.dropLast(1)
         rows?.forEach { row ->
             val cells = row.select("td")
             for ((index, cell) in cells.withIndex()) {

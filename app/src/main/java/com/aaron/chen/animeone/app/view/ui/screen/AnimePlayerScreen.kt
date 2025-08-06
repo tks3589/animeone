@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -45,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -63,6 +66,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.decode.GifDecoder
+import coil.request.ImageRequest
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
@@ -72,6 +78,7 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 @OptIn(UnstableApi::class)
@@ -170,35 +177,38 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
             LaunchedEffect(selectedEpisode.value) {
                 val episodeBean = selectedEpisode.value!!
                 isVideoBuffering.value = true
-                viewModel.requestAnimeVideo(episodeBean.dataApireq)
-                    .catch {
-                        Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
-                        isVideoBuffering.value = false
-                    }
-                    .collect { video ->
-                        val videoSrc = video.src
-                        val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
-                        val mediaItem = MediaItem.fromUri(fixedUrl)
-                        val headers = mapOf(
-                            "Cookie" to video.cookie,
-                            "Referer" to RetrofitModule.BASE_URL,
-                            "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
-                        )
-                        val dataSourceFactory = DefaultHttpDataSource.Factory()
-                            .setDefaultRequestProperties(headers)
-                        val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                            .createMediaSource(mediaItem)
-                        player.setMediaSource(mediaSource)
-                        player.prepare()
-                        player.play()
+                launch {
+                    viewModel.requestAnimeVideo(episodeBean.dataApireq)
+                        .catch {
+                            Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
+                            isVideoBuffering.value = false
+                        }
+                        .collect { video ->
+                            val videoSrc = video.src
+                            val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
+                            val mediaItem = MediaItem.fromUri(fixedUrl)
+                            val headers = mapOf(
+                                "Cookie" to video.cookie,
+                                "Referer" to RetrofitModule.BASE_URL,
+                                "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
+                            )
+                            val dataSourceFactory = DefaultHttpDataSource.Factory()
+                                .setDefaultRequestProperties(headers)
+                            val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                                .createMediaSource(mediaItem)
+                            player.setMediaSource(mediaSource)
+                            player.prepare()
+                            player.play()
 
-                        val session = Clock.System.now().toEpochMilliseconds()
-                        val title = "${episodeBean.title} 第 ${episodeBean.episode} 話"
-                        viewModel.addRecordAnime(AnimeRecordBean(id = animeId, title = title, episode = episodeBean.episode, session = session))
-                    }
-
-                //loading comments
-                viewModel.requestAnimeComments(episodeBean.id)
+                            val session = Clock.System.now().toEpochMilliseconds()
+                            val title = "${episodeBean.title} 第 ${episodeBean.episode} 話"
+                            viewModel.addRecordAnime(AnimeRecordBean(id = animeId, title = title, episode = episodeBean.episode, session = session))
+                        }
+                }
+                launch {
+                    //loading comments
+                    viewModel.requestAnimeComments(episodeBean.id)
+                }
             }
 
             if (!isFullscreen.value) {
@@ -380,6 +390,7 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
 
 @Composable
 fun CommentItem(comment: AnimeCommentBean) {
+    val parts = splitMessageWithMedia(comment.message)
     Row(modifier = Modifier.fillMaxWidth()) {
         AsyncImage(
             model = comment.user.avatar.url,
@@ -398,11 +409,60 @@ fun CommentItem(comment: AnimeCommentBean) {
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            Text(
-                text = comment.message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            parts.forEach { part ->
+                when (part) {
+                    is MessagePart.Text -> {
+                        if (part.text.isNotBlank()) {
+                            Text(
+                                text = part.text.trim(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+
+                    is MessagePart.ImagePlaceholder -> {
+                        val media = comment.media.getOrNull(part.mediaIndex)
+                        if (media != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            SubcomposeAsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(media.url)
+                                    .crossfade(true)
+                                    .decoderFactory(GifDecoder.Factory())
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 300.dp)
+                                    .background(Color.LightGray),
+                                loading = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(150.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                },
+                                error = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(150.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("圖片載入失敗", color = Color.White)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
             Text(
                 text = comment.createdAt,
                 style = MaterialTheme.typography.labelSmall,
@@ -413,3 +473,26 @@ fun CommentItem(comment: AnimeCommentBean) {
     }
 }
 
+private fun splitMessageWithMedia(message: String): List<MessagePart> {
+    val imageUrlRegex = "(https?://[^\\s]+\\.(jpg|jpeg|png|gif))".toRegex(RegexOption.IGNORE_CASE)
+    val parts = mutableListOf<MessagePart>()
+    var lastIndex = 0
+    imageUrlRegex.findAll(message).forEachIndexed { index, match ->
+        val start = match.range.first
+        if (start > lastIndex) {
+            val text = message.substring(lastIndex, start)
+            parts.add(MessagePart.Text(text))
+        }
+        parts.add(MessagePart.ImagePlaceholder(index))
+        lastIndex = match.range.last + 1
+    }
+    if (lastIndex < message.length) {
+        parts.add(MessagePart.Text(message.substring(lastIndex)))
+    }
+    return parts
+}
+
+sealed class MessagePart {
+    data class Text(val text: String) : MessagePart()
+    data class ImagePlaceholder(val mediaIndex: Int) : MessagePart()
+}
