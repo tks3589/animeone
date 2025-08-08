@@ -8,6 +8,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -28,6 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,6 +58,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -75,6 +81,7 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import kotlinx.coroutines.flow.catch
@@ -390,6 +397,7 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
 
 @Composable
 fun CommentItem(comment: AnimeCommentBean) {
+    var isImageClickedUrl = remember { mutableStateOf(DefaultConst.EMPTY_STRING) }
     val parts = splitMessageWithMedia(comment.message)
     Row(modifier = Modifier.fillMaxWidth()) {
         AsyncImage(
@@ -426,6 +434,7 @@ fun CommentItem(comment: AnimeCommentBean) {
                         val media = comment.media.getOrNull(part.mediaIndex)
                         if (media != null) {
                             Spacer(modifier = Modifier.height(8.dp))
+                            var isImageLoaded = remember { mutableStateOf(false) }
                             SubcomposeAsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
                                     .data(media.url)
@@ -435,9 +444,17 @@ fun CommentItem(comment: AnimeCommentBean) {
                                 contentDescription = null,
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
-                                    .fillMaxWidth()
                                     .heightIn(max = 300.dp)
-                                    .background(Color.LightGray),
+                                    .background(Color.LightGray)
+                                    .then(
+                                        if (isImageLoaded.value) {
+                                            Modifier.clickable {
+                                                isImageClickedUrl.value = media.url
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
                                 loading = {
                                     Box(
                                         modifier = Modifier
@@ -448,14 +465,18 @@ fun CommentItem(comment: AnimeCommentBean) {
                                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                                     }
                                 },
+                                onSuccess = {
+                                    isImageLoaded.value = true
+                                },
                                 error = {
+                                    isImageLoaded.value = false
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(150.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("圖片載入失敗", color = Color.White)
+                                        Text("載入失敗", color = Color.White)
                                     }
                                 }
                             )
@@ -469,6 +490,84 @@ fun CommentItem(comment: AnimeCommentBean) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
             )
+        }
+    }
+    if (isImageClickedUrl.value.isNotEmpty()) {
+        var imageWidth = remember { mutableStateOf(0) }
+        var imageHeight = remember { mutableStateOf(0) }
+        Dialog(
+            onDismissRequest = { isImageClickedUrl.value = DefaultConst.EMPTY_STRING },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 16.dp,
+                            end = 16.dp
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+//                    // 下載按鈕
+//                    IconButton(
+//                        onClick = {
+//                            // TODO: 加入下載邏輯
+//                        }
+//                    ) {
+//                        Icon(
+//                            imageVector = Icons.Default.ArrowDropDown, // 你可以換成 ImageVector.vectorResource(...) 放自己的圖示
+//                            contentDescription = "下載",
+//                            tint = Color.White
+//                        )
+//                    }
+
+                    // 關閉按鈕
+                    IconButton(
+                        onClick = {
+                            isImageClickedUrl.value = DefaultConst.EMPTY_STRING
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "關閉",
+                            tint = Color.White
+                        )
+                    }
+                }
+
+                // 圖片內容（置中）
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(isImageClickedUrl.value)
+                        .crossfade(true)
+                        .decoderFactory(GifDecoder.Factory())
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .then(
+                            if (imageHeight.value > imageWidth.value) {
+                                Modifier.padding(
+                                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
+                    onSuccess = {
+                        imageWidth.value = it.result.drawable.intrinsicWidth
+                        imageHeight.value = it.result.drawable.intrinsicHeight
+                    }
+                )
+            }
         }
     }
 }
