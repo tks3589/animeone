@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "80206807434",
+    "project_id": "mxanime-d60e0",
+    "storage_bucket": "mxanime-d60e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80206807434:android:ec50941f94bcbf58d6c873",
+        "android_client_info": {
+          "package_name": "com.aaron.chen.animeone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0Er6Lm16WoKhUVJvk_ammwZCwnm-ywU0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

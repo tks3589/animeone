@@ -3,13 +3,12 @@ package com.aaron.chen.animeone.app.view.ui.screen
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -53,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,7 +81,6 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
-import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import kotlinx.coroutines.flow.catch
@@ -99,6 +98,17 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val selectedEpisode = remember { mutableStateOf<AnimeEpisodeBean?>(null) }
     val isFullscreen = remember { mutableStateOf(false) }
     val isVideoBuffering = remember { mutableStateOf(true) }
+    val imageDialogUrl = remember { mutableStateOf<String?>(null) }
+    val uiMode = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK
+
+    LaunchedEffect(uiMode) {
+        activity?.window?.also {
+            val isLight = uiMode != Configuration.UI_MODE_NIGHT_YES
+            val controller = WindowCompat.getInsetsController(it, it.decorView)
+            controller.isAppearanceLightStatusBars = isLight
+            controller.isAppearanceLightNavigationBars = isLight
+        }
+    }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -112,11 +122,10 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
         }
     }
 
-    val currentActivity = context as? ComponentActivity
-    DisposableEffect(currentActivity) {
-        currentActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    DisposableEffect(activity) {
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
-            currentActivity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -146,10 +155,27 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
         }
     }
 
+    LaunchedEffect(imageDialogUrl.value) {
+        if (imageDialogUrl.value != null) {
+            player.pause()
+        }
+    }
+
+    // status bar
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            )
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(if (isFullscreen.value) PaddingValues(0.dp) else WindowInsets.statusBars.asPaddingValues())
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Player Section
         if (selectedEpisode.value != null) {
@@ -157,6 +183,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isFullscreen.value) Modifier.weight(1f) else Modifier.aspectRatio(16 / 9f))
+                    .background(Color.Black)
             ) {
                 AndroidView(
                     factory = { ctx ->
@@ -223,7 +250,6 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.background)
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -256,13 +282,16 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                 }
 
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    )
                 ) {
                     item {
                         EpisodeSection((episodeLoadState.value as? UiState.Success), selectedEpisode)
                     }
                     item {
-                        CommentSection(commentsLoadState.value)
+                        CommentSection(commentsLoadState.value, imageDialogUrl)
                     }
                 }
             }
@@ -301,7 +330,7 @@ private fun EpisodeSection(state: UiState.Success<List<AnimeEpisodeBean>>?, sele
 }
 
 @Composable
-private fun CommentSection(commentState: UiState<List<AnimeCommentBean>>) {
+private fun CommentSection(commentState: UiState<List<AnimeCommentBean>>, imageDialogUrl: MutableState<String?>) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             text = "留言板",
@@ -336,7 +365,7 @@ private fun CommentSection(commentState: UiState<List<AnimeCommentBean>>) {
                     )
                 } else {
                     commentState.data.forEach { comment ->
-                        CommentItem(comment)
+                        CommentItem(comment, imageDialogUrl)
                         Divider(modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
@@ -396,8 +425,7 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
 }
 
 @Composable
-fun CommentItem(comment: AnimeCommentBean) {
-    var isImageClickedUrl = remember { mutableStateOf(DefaultConst.EMPTY_STRING) }
+fun CommentItem(comment: AnimeCommentBean, imageDialogUrl: MutableState<String?>) {
     val parts = splitMessageWithMedia(comment.message)
     Row(modifier = Modifier.fillMaxWidth()) {
         AsyncImage(
@@ -449,7 +477,7 @@ fun CommentItem(comment: AnimeCommentBean) {
                                     .then(
                                         if (isImageLoaded.value) {
                                             Modifier.clickable {
-                                                isImageClickedUrl.value = media.url
+                                                imageDialogUrl.value = media.url
                                             }
                                         } else {
                                             Modifier
@@ -492,44 +520,41 @@ fun CommentItem(comment: AnimeCommentBean) {
             )
         }
     }
-    if (isImageClickedUrl.value.isNotEmpty()) {
-        var imageWidth = remember { mutableStateOf(0) }
-        var imageHeight = remember { mutableStateOf(0) }
+    if (imageDialogUrl.value != null) {
+        val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         Dialog(
-            onDismissRequest = { isImageClickedUrl.value = DefaultConst.EMPTY_STRING },
+            onDismissRequest = { imageDialogUrl.value = null },
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.95f))
+                    .padding(top = topPadding, bottom = bottomPadding)
             ) {
+                // 圖片內容（置中）
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageDialogUrl.value)
+                        .crossfade(true)
+                        .decoderFactory(GifDecoder.Factory())
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center),
+                )
+
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(
-                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 16.dp,
-                            end = 16.dp
-                        ),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-//                    // 下載按鈕
-//                    IconButton(
-//                        onClick = {
-//                            // TODO: 加入下載邏輯
-//                        }
-//                    ) {
-//                        Icon(
-//                            imageVector = Icons.Default.ArrowDropDown, // 你可以換成 ImageVector.vectorResource(...) 放自己的圖示
-//                            contentDescription = "下載",
-//                            tint = Color.White
-//                        )
-//                    }
-
                     // 關閉按鈕
                     IconButton(
                         onClick = {
-                            isImageClickedUrl.value = DefaultConst.EMPTY_STRING
+                            imageDialogUrl.value = null
                         }
                     ) {
                         Icon(
@@ -539,34 +564,6 @@ fun CommentItem(comment: AnimeCommentBean) {
                         )
                     }
                 }
-
-                // 圖片內容（置中）
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(isImageClickedUrl.value)
-                        .crossfade(true)
-                        .decoderFactory(GifDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.Center)
-                        .then(
-                            if (imageHeight.value > imageWidth.value) {
-                                Modifier.padding(
-                                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
-                                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                                )
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    onSuccess = {
-                        imageWidth.value = it.result.drawable.intrinsicWidth
-                        imageHeight.value = it.result.drawable.intrinsicHeight
-                    }
-                )
             }
         }
     }
