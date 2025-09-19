@@ -71,11 +71,10 @@ object HtmlUtils {
                         )
                     }
                 } else if (cell.text().isNotBlank()) {
-                    // 處理純文字動畫（無 <a> 的情況，例如 "戰隊大失格"）
                     val title = cell.text()
                     timeline.add(
                         AnimeSeasonTimeLineRespVo.AnimeLiteRespVo().apply {
-                            this.id = DefaultConst.EMPTY_STRING  // 沒有 ID 可抓
+                            this.id = DefaultConst.EMPTY_STRING
                             this.day = day
                             this.title = title
                         }

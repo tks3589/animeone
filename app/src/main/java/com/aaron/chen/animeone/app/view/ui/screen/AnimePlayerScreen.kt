@@ -6,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +29,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
@@ -39,7 +42,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -69,20 +71,31 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
 import coil.decode.GifDecoder
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
+import com.aaron.chen.animeone.app.model.data.bean.MediaBean
 import com.aaron.chen.animeone.app.model.state.UiState
+import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
+import com.google.accompanist.placeholder.material.placeholder
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -93,13 +106,14 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val episodeLoadState = viewModel.episodeState.collectAsState(UiState.Idle)
     val commentsLoadState = viewModel.commentState.collectAsState(UiState.Idle)
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val selectedEpisode = remember { mutableStateOf<AnimeEpisodeBean?>(null) }
     val isFullscreen = remember { mutableStateOf(false) }
     val isVideoBuffering = remember { mutableStateOf(true) }
     val imageDialogUrl = remember { mutableStateOf<String?>(null) }
-    val uiMode = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    val configuration = LocalConfiguration.current
+    val uiMode = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
 
     LaunchedEffect(uiMode) {
         activity?.window?.also {
@@ -203,7 +217,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = Color.White)
                     }
                 }
             }
@@ -214,28 +228,16 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                 launch {
                     viewModel.requestAnimeVideo(episodeBean.dataApireq)
                         .catch {
-                            Toast.makeText(context, "載入影片失敗：${it.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "${context.resources.getString(R.string.error_text)}：${it.message}", Toast.LENGTH_SHORT).show()
                             isVideoBuffering.value = false
                         }
                         .collect { video ->
-                            val videoSrc = video.src
-                            val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
-                            val mediaItem = MediaItem.fromUri(fixedUrl)
-                            val headers = mapOf(
-                                "Cookie" to video.cookie,
-                                "Referer" to RetrofitModule.BASE_URL,
-                                "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
-                            )
-                            val dataSourceFactory = DefaultHttpDataSource.Factory()
-                                .setDefaultRequestProperties(headers)
-                            val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                                .createMediaSource(mediaItem)
-                            player.setMediaSource(mediaSource)
+                            player.setMediaSource(getMediaSource(video))
                             player.prepare()
                             player.play()
 
                             val session = Clock.System.now().toEpochMilliseconds()
-                            val title = "${episodeBean.title} 第 ${episodeBean.episode} 話"
+                            val title = "${episodeBean.title} ${context.resources.getString(R.string.episode_title, episodeBean.episode)}"
                             viewModel.addRecordAnime(AnimeRecordBean(id = animeId, title = title, episode = episodeBean.episode, session = session))
                         }
                 }
@@ -250,28 +252,27 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = CommonMargin.m4, vertical = CommonMargin.m4),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "${episode.title} - 第 ${episode.episode} 話",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
+                        CommonTextM(
+                            text = "${episode.title} - ${stringResource(R.string.episode_title, episode.episode)}",
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Start,
+                            bold = true,
                             modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
                         )
 
                         IconButton(
                             onClick = {
-                                val shareText = "${episode.title} - 第 ${episode.episode} 話\n${RetrofitModule.BASE_URL}${episode.id}"
+                                val shareText = "${episode.title} - ${context.resources.getString(R.string.episode_title, episode.episode)}\n${RetrofitModule.BASE_URL}${episode.id}"
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, shareText)
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "分享到"))
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
                             },
-                            modifier = Modifier.size(20.dp)) {
+                            modifier = Modifier.size(CommonMargin.m5)) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "分享",
@@ -290,8 +291,69 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                     item {
                         EpisodeSection((episodeLoadState.value as? UiState.Success), selectedEpisode)
                     }
+                    // Comment 區塊標題
                     item {
-                        CommentSection(commentsLoadState.value, imageDialogUrl)
+                        CommonTextM(
+                            text = stringResource(R.string.comment_board),
+                            modifier = Modifier.padding(
+                                horizontal = CommonMargin.m4,
+                                vertical = CommonMargin.m2
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Comment 狀態處理
+                    when (val state = commentsLoadState.value) {
+                        is UiState.Idle, is UiState.Loading -> {
+                            item {
+                                CommonTextS(
+                                    text = stringResource(R.string.loading_text),
+                                    modifier = Modifier.padding(CommonMargin.m4),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        is UiState.Empty -> {
+                            item {
+                                CommonTextS(
+                                    text = stringResource(R.string.no_comment_list),
+                                    modifier = Modifier.padding(CommonMargin.m4),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        is UiState.Error -> {
+                            item {
+                                CommonTextS(
+                                    text = "${stringResource(R.string.error_text)}：${state.message}",
+                                    modifier = Modifier.padding(CommonMargin.m4),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        is UiState.Success -> {
+                            if (state.data.isEmpty()) {
+                                item {
+                                    CommonTextS(
+                                        text = stringResource(R.string.no_comment_list),
+                                        modifier = Modifier.padding(CommonMargin.m4),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                // 每個留言獨立成 LazyColumn item
+                                items(state.data, key = { it.id }) { comment ->
+                                    Column(modifier = Modifier.padding(horizontal = CommonMargin.m4)) {
+                                        CommentItem(comment, imageDialogUrl)
+                                        Divider(modifier = Modifier.padding(vertical = CommonMargin.m2))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -301,16 +363,33 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
            LoadingText()
         }
     }
+
+    // comment image dialog
+    imageDialogUrl.value?.let { url ->
+        ImageDialog(imageDialogUrl)
+    }
 }
 
+@OptIn(UnstableApi::class)
+private fun getMediaSource(video: AnimeVideoBean): MediaSource {
+    val videoSrc = video.src
+    val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
+    val mediaItem = MediaItem.fromUri(fixedUrl)
+    val headers = mapOf(
+        "Cookie" to video.cookie,
+        "Referer" to RetrofitModule.BASE_URL,
+        "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
+    )
+    val dataSourceFactory = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
+    return ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+}
 
 @Composable
 private fun EpisodeSection(state: UiState.Success<List<AnimeEpisodeBean>>?, selectedEpisode: MutableState<AnimeEpisodeBean?>) {
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        maxItemsInEachRow = 4
+            .padding(CommonMargin.m2)
     ) {
         state?.data?.forEach { episode ->
             val isSelected = episode == selectedEpisode.value
@@ -323,52 +402,13 @@ private fun EpisodeSection(state: UiState.Success<List<AnimeEpisodeBean>>?, sele
                         MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Text("第 ${episode.episode} 話")
-            }
-        }
-    }
-}
-
-@Composable
-private fun CommentSection(commentState: UiState<List<AnimeCommentBean>>, imageDialogUrl: MutableState<String?>) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = "留言板",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        when (commentState) {
-            is UiState.Idle,
-            is UiState.Loading -> {
-                Text(
-                    text = stringResource(R.string.loading_text),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                CommonTextS(
+                    text = stringResource(R.string.episode_title, episode.episode),
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.onPrimary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            is UiState.Empty -> {}
-            is UiState.Error -> {
-                Text(
-                    text = "${stringResource(R.string.error_text)}：${commentState.message}",
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            is UiState.Success -> {
-                if (commentState.data.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_comment_list),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    commentState.data.forEach { comment ->
-                        CommentItem(comment, imageDialogUrl)
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                }
             }
         }
     }
@@ -379,12 +419,11 @@ private fun LoadingText() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(CommonMargin.m4),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        CommonTextS(
             text = stringResource(R.string.loading_text),
-            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -395,10 +434,10 @@ private fun ErrorText(message: String? = null) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(CommonMargin.m4),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        CommonTextS(
             text = stringResource(R.string.error_text),
             color = MaterialTheme.colorScheme.error
         )
@@ -420,7 +459,7 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
     } else {
         // 退出全螢幕
         controller.show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 }
 
@@ -428,141 +467,167 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
 fun CommentItem(comment: AnimeCommentBean, imageDialogUrl: MutableState<String?>) {
     val parts = splitMessageWithMedia(comment.message)
     Row(modifier = Modifier.fillMaxWidth()) {
-        AsyncImage(
-            model = comment.user.avatar.url,
-            contentDescription = "頭像",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
+        Avatar(url = comment.user.avatar.url)
+        Spacer(modifier = Modifier.width(CommonMargin.m2))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            CommonTextS(
                 text = comment.user.name,
-                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
             parts.forEach { part ->
                 when (part) {
                     is MessagePart.Text -> {
                         if (part.text.isNotBlank()) {
-                            Text(
+                            CommonTextS(
                                 text = part.text.trim(),
-                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp)
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.padding(top = CommonMargin.m1)
                             )
                         }
                     }
 
                     is MessagePart.ImagePlaceholder -> {
-                        val media = comment.media.getOrNull(part.mediaIndex)
-                        if (media != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            var isImageLoaded = remember { mutableStateOf(false) }
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(media.url)
-                                    .crossfade(true)
-                                    .decoderFactory(GifDecoder.Factory())
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .heightIn(max = 300.dp)
-                                    .background(Color.LightGray)
-                                    .then(
-                                        if (isImageLoaded.value) {
-                                            Modifier.clickable {
-                                                imageDialogUrl.value = media.url
-                                            }
-                                        } else {
-                                            Modifier
-                                        }
-                                    ),
-                                loading = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(150.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                    }
-                                },
-                                onSuccess = {
-                                    isImageLoaded.value = true
-                                },
-                                error = {
-                                    isImageLoaded.value = false
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(150.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("載入失敗", color = Color.White)
-                                    }
-                                }
-                            )
+                        comment.media.getOrNull(part.mediaIndex)?.let {
+                            CommentImageResources(it, imageDialogUrl)
                         }
                     }
                 }
             }
-            Text(
+            CommonTextXS(
                 text = comment.createdAt,
-                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
     }
-    if (imageDialogUrl.value != null) {
-        val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        Dialog(
-            onDismissRequest = { imageDialogUrl.value = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
+}
+
+@Composable
+private fun getImageRequest(url: String): ImageRequest {
+    return ImageRequest.Builder(LocalContext.current)
+        .data(url)
+        .crossfade(true)
+        .diskCachePolicy(CachePolicy.ENABLED)
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .apply {
+            if (url.endsWith(".gif")) {
+                decoderFactory(GifDecoder.Factory())
+            }
+        }.build()
+}
+
+@Composable
+private fun CommentImageResources(media: MediaBean, imageDialogUrl: MutableState<String?>) {
+    Spacer(modifier = Modifier.height(CommonMargin.m2))
+    val isImageLoaded = remember { mutableStateOf(false) }
+    SubcomposeAsyncImage(
+        model = getImageRequest(media.url),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .heightIn(max = 200.dp)
+            .clip(RoundedCornerShape(CommonMargin.m2))
+            .background(Color.LightGray)
+            .then(
+                if (isImageLoaded.value) {
+                    Modifier.clickable {
+                        imageDialogUrl.value = media.url
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        loading = {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.95f))
-                    .padding(top = topPadding, bottom = bottomPadding)
+                    .fillMaxWidth(0.5f)
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
             ) {
-                // 圖片內容（置中）
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageDialogUrl.value)
-                        .crossfade(true)
-                        .decoderFactory(GifDecoder.Factory())
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.Center),
+                CircularProgressIndicator(modifier = Modifier.size(CommonMargin.m4), color = Color.White)
+            }
+        },
+        onSuccess = {
+            isImageLoaded.value = true
+        },
+        error = {
+            isImageLoaded.value = false
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CommonTextXS(
+                    text = stringResource(R.string.error_text),
+                    color = Color.White
                 )
+            }
+        }
+    )
+}
 
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                ) {
-                    // 關閉按鈕
-                    IconButton(
-                        onClick = {
-                            imageDialogUrl.value = null
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "關閉",
-                            tint = Color.White
-                        )
+@Composable
+private fun Avatar(url: String) {
+    val isAvatarLoading = remember { mutableStateOf(false) }
+    AsyncImage(
+        model = url,
+        contentDescription = "頭像",
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .placeholder(
+                visible = isAvatarLoading.value,
+                color = Color.LightGray,
+                shape = CircleShape
+            ),
+        contentScale = ContentScale.Crop,
+        onState = { state ->
+            isAvatarLoading.value = state is AsyncImagePainter.State.Loading
+        }
+    )
+}
+
+@Composable
+private fun ImageDialog(imageDialogUrl: MutableState<String?>) {
+    val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Dialog(
+        onDismissRequest = { imageDialogUrl.value = null },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.95f))
+                .padding(top = topPadding, bottom = bottomPadding)
+        ) {
+            // 圖片內容（置中）
+            SubcomposeAsyncImage(
+                model = getImageRequest(imageDialogUrl.value ?: DefaultConst.EMPTY_STRING),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center),
+            )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+            ) {
+                // 關閉按鈕
+                IconButton(
+                    onClick = {
+                        imageDialogUrl.value = null
                     }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "關閉",
+                        tint = Color.White
+                    )
                 }
             }
         }

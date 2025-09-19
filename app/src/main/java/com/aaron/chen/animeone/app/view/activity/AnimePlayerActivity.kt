@@ -14,6 +14,7 @@ import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
+import com.aaron.chen.animeone.constant.ExtraConst
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AnimePlayerActivity : ComponentActivity() {
@@ -23,8 +24,8 @@ class AnimePlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val animeId = intent.getStringExtra("animeId") ?: DefaultConst.EMPTY_STRING
-        val episode = intent.getIntExtra("episode", 1)
+        val animeId = intent.getStringExtra(ExtraConst.ANIME_ID) ?: DefaultConst.EMPTY_STRING
+        val episode = intent.getIntExtra(ExtraConst.EPISODE, 1)
         player = ExoPlayer.Builder(this).build().apply {
             playWhenReady = true
         }

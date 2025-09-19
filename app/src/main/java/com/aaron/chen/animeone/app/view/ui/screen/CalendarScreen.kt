@@ -26,11 +26,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
+import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
+import com.aaron.chen.animeone.constant.ExtraConst
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -63,7 +69,10 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
         is UiState.Empty -> {}
         is UiState.Error -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "載入失敗：${state.message}", color = MaterialTheme.colorScheme.error)
+                CommonTextS(
+                    text = "${stringResource(R.string.error_text)}：${state.message}",
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
         is UiState.Success -> {
@@ -73,8 +82,10 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
             }
             val seasonTitle = calendarState.seasonTitle
 
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(text = seasonTitle, style = MaterialTheme.typography.titleMedium)
+            Column(modifier = Modifier.padding(CommonMargin.m6)) {
+                CommonTextM(
+                    text = seasonTitle
+                )
 
                 TabRow(selectedTabIndex = pagerState.currentPage) {
                     daysOfWeek.forEachIndexed { index, day ->
@@ -101,10 +112,12 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(CommonMargin.m4),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "當天無新番", style = MaterialTheme.typography.bodyMedium)
+                            CommonTextS(
+                                text = stringResource(R.string.no_newest_anime)
+                            )
                         }
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -114,14 +127,17 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                                         .fillMaxWidth()
                                         .clickable {
                                             val intent = Intent(context, AnimePlayerActivity::class.java)
-                                            intent.putExtra("animeId", anime.id)
+                                            intent.putExtra(ExtraConst.ANIME_ID, anime.id)
                                             context.startActivity(intent)
                                         }
-                                        .padding(vertical = 4.dp),
-                                    elevation = CardDefaults.cardElevation(4.dp)
+                                        .padding(vertical = CommonMargin.m1),
+                                    elevation = CardDefaults.cardElevation(CommonMargin.m1),
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(text = anime.title, style = MaterialTheme.typography.titleMedium)
+                                    Column(modifier = Modifier.padding(CommonMargin.m4)) {
+                                        CommonTextM(
+                                            text = anime.title,
+                                            textAlign = TextAlign.Start
+                                        )
                                     }
                                 }
                             }

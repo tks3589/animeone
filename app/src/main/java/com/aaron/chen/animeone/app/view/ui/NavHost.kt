@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,7 +35,7 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
 }
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Anime : Screen("anime", "Anime", Icons.Default.Home)
-    object Calendar: Screen("calendar", "Calendar", Icons.Default.DateRange)
-    object Record : Screen("record", "Record", Icons.Default.Favorite)
+    object Anime : Screen("anime", "動畫列表", Icons.Default.Home)
+    object Calendar: Screen("calendar", "時間表", Icons.Default.DateRange)
+    object Record : Screen("record", "觀看紀錄", Icons.Default.Menu)
 }

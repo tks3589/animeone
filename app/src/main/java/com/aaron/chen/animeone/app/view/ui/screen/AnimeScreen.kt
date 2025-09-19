@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,14 +32,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
+import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
 import com.aaron.chen.animeone.app.view.ui.widget.PullToRefresh
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
+import com.aaron.chen.animeone.constant.ExtraConst
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 
 @Composable
@@ -49,16 +55,18 @@ fun AnimeScreen(
 ) {
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimeList().collectAsLazyPagingItems()
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf(DefaultConst.EMPTY_STRING) }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize()
+    ) {
         Column(
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(CommonMargin.m6)
         ) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("搜尋動畫名稱") },
+                placeholder = { Text(stringResource(R.string.search_anime)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = {
@@ -66,7 +74,7 @@ fun AnimeScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CommonMargin.m4))
 
             PullToRefresh(
                 isRefreshing = animeItems.loadState.refresh is LoadState.Loading,
@@ -74,16 +82,16 @@ fun AnimeScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(CommonMargin.m2)
                 ) {
                     when (val state = animeItems.loadState.refresh) {
                         is LoadState.Error -> {
                             item {
                                 Text(
-                                    text = "載入失敗: ${state.error.localizedMessage}",
+                                    text = "${stringResource(R.string.error_text)}: ${state.error.localizedMessage}",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .padding(CommonMargin.m4)
                                 )
                             }
                         }
@@ -94,7 +102,7 @@ fun AnimeScreen(
                             items(filteredItems) { anime ->
                                 AnimeItem(anime, onClick = {
                                     val intent = Intent(context, AnimePlayerActivity::class.java)
-                                    intent.putExtra("animeId", anime.id)
+                                    intent.putExtra(ExtraConst.ANIME_ID, anime.id)
                                     context.startActivity(intent)
                                 })
                             }
@@ -112,18 +120,18 @@ fun AnimeItem(anime: AnimeEntity, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(8.dp)
+            .padding(CommonMargin.m2)
     ) {
         AsyncImage(
             model = R.drawable.anime1,
             contentDescription = anime.title,
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(RoundedCornerShape(CommonMargin.m2)),
             contentScale = ContentScale.Crop
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(CommonMargin.m3))
 
         Column(
             modifier = Modifier
@@ -131,15 +139,14 @@ fun AnimeItem(anime: AnimeEntity, onClick: () -> Unit) {
                 .weight(1f),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
+            CommonTextM(
                 text = anime.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2
+                maxLines = 2,
+                textAlign = TextAlign.Start
             )
 
-            Text(
-                text = anime.status+" , "+anime.year+" , "+anime.season,
-                style = MaterialTheme.typography.bodySmall,
+            CommonTextXS(
+                text = "${anime.status} , ${anime.year} , ${anime.season}",
                 color = Color.Gray,
                 maxLines = 1
             )
