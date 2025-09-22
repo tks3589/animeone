@@ -1,7 +1,16 @@
 <resources>
-    <string name="app_name">Animeone</string>
+    <string name="app_name">mxAnime</string>
     <string name="anime_list">動畫列表</string>
-    <string name="favorite_list">我的收藏</string>
-    <string name="my_profile">我的檔案</string>
+    <string name="calendar">時間表</string>
+    <string name="record_list">觀看紀錄</string>
+    <string name="no_record_list">目前還沒有紀錄ㄛ</string>
+    <string name="no_comment_list">目前沒有留言。</string>
     <string name="event_list">活動列表</string>
+    <string name="loading_text">載入中…</string>
+    <string name="error_text">載入失敗</string>
+    <string name="episode_title">第 %1$d 話</string>
+    <string name="share_to">分享到</string>
+    <string name="comment_board">留言板</string>
+    <string name="search_anime">搜尋動畫名稱</string>
+    <string name="no_newest_anime">當天無新番</string>
 </resources>
