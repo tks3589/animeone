@@ -128,6 +128,17 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
+                if (playbackState == Player.STATE_ENDED) {
+                    val episodes = (episodeLoadState.value as? UiState.Success)?.data.orEmpty()
+                    val current = selectedEpisode.value
+                    val currentIndex = episodes.indexOfFirst { it.id == current?.id }
+
+                    if (currentIndex != -1 && currentIndex < episodes.lastIndex) {
+                        selectedEpisode.value = episodes[currentIndex + 1]
+                    } else {
+                        selectedEpisode.value = episodes.first()
+                    }
+                }
             }
         }
         player.addListener(listener)
