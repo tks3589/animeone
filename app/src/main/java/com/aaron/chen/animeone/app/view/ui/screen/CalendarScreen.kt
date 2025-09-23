@@ -128,6 +128,7 @@ fun CalendarScreen(viewModel: IAnimeoneViewModel) {
                                         .clickable {
                                             val intent = Intent(context, AnimePlayerActivity::class.java)
                                             intent.putExtra(ExtraConst.ANIME_ID, anime.id)
+                                            intent.putExtra(ExtraConst.PLAY_LAST, true)
                                             context.startActivity(intent)
                                         }
                                         .padding(vertical = CommonMargin.m1),
