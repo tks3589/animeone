@@ -102,7 +102,7 @@ import kotlinx.datetime.Clock
 
 @OptIn(UnstableApi::class)
 @Composable
-fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int) {
+fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
     val episodeLoadState = viewModel.episodeState.collectAsState(UiState.Idle)
     val commentsLoadState = viewModel.commentState.collectAsState(UiState.Idle)
     val context = LocalContext.current
@@ -165,7 +165,12 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     LaunchedEffect(episodeLoadState.value) {
         val state = episodeLoadState.value
         if (state is UiState.Success && state.data.isNotEmpty()) {
-            selectedEpisode.value = state.data.firstOrNull { ep -> ep.episode == episode } ?: state.data.first()
+            val targetEpisode = if (playLast) {
+                state.data.lastOrNull() ?: state.data.last()
+            } else {
+                state.data.firstOrNull { it.episode == episode } ?: state.data.first()
+            }
+            selectedEpisode.value = targetEpisode
         }
     }
 

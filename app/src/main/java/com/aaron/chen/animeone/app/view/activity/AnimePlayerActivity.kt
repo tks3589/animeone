@@ -26,13 +26,14 @@ class AnimePlayerActivity : ComponentActivity() {
         enableEdgeToEdge()
         val animeId = intent.getStringExtra(ExtraConst.ANIME_ID) ?: DefaultConst.EMPTY_STRING
         val episode = intent.getIntExtra(ExtraConst.EPISODE, 1)
+        val playLast = intent.getBooleanExtra(ExtraConst.PLAY_LAST, false)
         player = ExoPlayer.Builder(this).build().apply {
             playWhenReady = true
         }
 
         setContent {
             AnimeoneTheme {
-                AnimePlayerScreen(viewModel = viewModel, player = player, animeId = animeId, episode = episode)
+                AnimePlayerScreen(viewModel = viewModel, player = player, animeId = animeId, episode = episode, playLast = playLast)
             }
         }
     }

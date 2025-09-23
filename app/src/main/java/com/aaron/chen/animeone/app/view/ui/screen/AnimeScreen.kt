@@ -103,6 +103,7 @@ fun AnimeScreen(
                                 AnimeItem(anime, onClick = {
                                     val intent = Intent(context, AnimePlayerActivity::class.java)
                                     intent.putExtra(ExtraConst.ANIME_ID, anime.id)
+                                    intent.putExtra(ExtraConst.PLAY_LAST, true)
                                     context.startActivity(intent)
                                 })
                             }
