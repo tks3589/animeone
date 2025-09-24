@@ -1,6 +1,7 @@
 package com.aaron.chen.animeone.app.view.ui.screen
 
 import android.content.Intent
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -121,36 +123,67 @@ fun AnimeItem(anime: AnimeEntity, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(CommonMargin.m2)
+            .padding(CommonMargin.m2),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = R.drawable.anime1,
-            contentDescription = anime.title,
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(CommonMargin.m2)),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.width(CommonMargin.m3))
-
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f),
-            verticalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.weight(1f)
         ) {
-            CommonTextM(
-                text = anime.title,
-                maxLines = 2,
-                textAlign = TextAlign.Start
+            AsyncImage(
+                model = R.drawable.anime1,
+                contentDescription = anime.title,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(CommonMargin.m2)),
+                contentScale = ContentScale.Crop
             )
 
-            CommonTextXS(
-                text = "${anime.status} , ${anime.year} , ${anime.season}",
-                color = Color.Gray,
-                maxLines = 1
-            )
+            Spacer(modifier = Modifier.width(CommonMargin.m3))
+
+            Column(
+                modifier = Modifier.fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                CommonTextM(
+                    text = anime.title,
+                    maxLines = 2,
+                    textAlign = TextAlign.Start
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CommonTextXS(
+                        text = anime.status,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .border(
+                                width = 1.dp,
+                                color = Color.Gray,
+                                shape = RoundedCornerShape(CommonMargin.m1)
+                            )
+                            .padding(horizontal = CommonMargin.m1)
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+//                    Text(
+//                        text = "NEW!!",
+//                        color = Color.Yellow,
+//                        fontSize = 10.sp
+//                    )
+                    CommonTextXS(
+                        text = "${anime.year} , ${anime.season}",
+                        color = Color.Gray,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = CommonMargin.m2)
+                    )
+                }
+            }
         }
     }
+
 }

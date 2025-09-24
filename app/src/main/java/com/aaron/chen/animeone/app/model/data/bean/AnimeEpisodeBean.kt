@@ -7,6 +7,7 @@ import kotlinx.parcelize.Parcelize
 data class AnimeEpisodeBean(
     val id: String,
     val title: String,
+    val updateTime: String,
     val episode: Int,
     val dataApireq: String
 ) : Parcelable

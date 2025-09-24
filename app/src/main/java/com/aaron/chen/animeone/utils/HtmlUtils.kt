@@ -1,15 +1,19 @@
 package com.aaron.chen.animeone.utils
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeSeasonTimeLineRespVo
 import com.aaron.chen.animeone.constant.DefaultConst
 import org.jsoup.Jsoup
 
 object HtmlUtils {
+    @RequiresApi(Build.VERSION_CODES.O)
     fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
         val document = Jsoup.parse(html)
         val articles = document.getElementsByTag("article").reversed()
         val videoTags = document.getElementsByTag("video").reversed()
+        val updateTImes = document.getElementsByTag("time").reversed()
         val result = mutableListOf<AnimeEpisodeBean>()
 
         if (videoTags.isEmpty()) return result
@@ -23,11 +27,13 @@ object HtmlUtils {
             val episodeNumber = index + 1
             val title = titlePrefix
             val animeId = articles[index].attr("id").substringAfter("post-")
+            val updateTime = DateTimeUtils.formatDate(updateTImes[index].text())
 
             result.add(
                 AnimeEpisodeBean(
                     id = animeId,
                     title = title,
+                    updateTime = updateTime,
                     episode = episodeNumber,
                     dataApireq = apiReq,
                 )

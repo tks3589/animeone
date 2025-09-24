@@ -13,4 +13,7 @@
     <string name="comment_board">留言板</string>
     <string name="search_anime">搜尋動畫名稱</string>
     <string name="no_newest_anime">當天無新番</string>
+    <string name="update_time">更新日期：%1$s</string>
+    <string name="my_favorite">我的收藏</string>
+    <string name="download_manager">下載管理</string>
 </resources>

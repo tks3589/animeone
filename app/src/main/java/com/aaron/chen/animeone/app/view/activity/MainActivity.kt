@@ -69,7 +69,9 @@ fun BottomNavApp() {
 val bottomNavItems = listOf(
     Screen.Anime,
     Screen.Calendar,
-    Screen.Record
+    Screen.Record,
+    Screen.Favorite,
+    Screen.Download
 )
 
 @Composable

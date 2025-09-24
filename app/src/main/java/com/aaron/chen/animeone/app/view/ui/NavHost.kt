@@ -4,7 +4,9 @@ import CalendarScreen
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
@@ -14,6 +16,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.aaron.chen.animeone.app.view.ui.screen.AnimeScreen
+import com.aaron.chen.animeone.app.view.ui.screen.DownloadScreen
+import com.aaron.chen.animeone.app.view.ui.screen.FavoriteScreen
 import com.aaron.chen.animeone.app.view.ui.screen.RecordScreen
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
@@ -31,6 +35,8 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
         composable(Screen.Anime.route) { AnimeScreen(viewModel) }
         composable(Screen.Calendar.route) { CalendarScreen(viewModel) }
         composable(Screen.Record.route) { RecordScreen(viewModel) }
+        composable(Screen.Favorite.route) { FavoriteScreen(viewModel) }
+        composable(Screen.Download.route) { DownloadScreen(viewModel) }
     }
 }
 
@@ -38,4 +44,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Anime : Screen("anime", "動畫列表", Icons.Default.Home)
     object Calendar: Screen("calendar", "時間表", Icons.Default.DateRange)
     object Record : Screen("record", "觀看紀錄", Icons.Default.Menu)
+    object Favorite : Screen("favorite", "我的收藏", Icons.Default.FavoriteBorder)
+    object Download : Screen("download", "下載管理", Icons.Default.ArrowDropDown)
 }
