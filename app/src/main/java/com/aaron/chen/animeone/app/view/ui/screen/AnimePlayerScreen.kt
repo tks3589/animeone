@@ -4,12 +4,14 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -34,6 +36,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -88,6 +93,7 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.data.bean.MediaBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextL
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
@@ -114,6 +120,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val imageDialogUrl = remember { mutableStateOf<String?>(null) }
     val configuration = LocalConfiguration.current
     val uiMode = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    val showControls = remember { mutableStateOf(false) }
 
     LaunchedEffect(uiMode) {
         activity?.window?.also {
@@ -223,10 +230,59 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                             setFullscreenButtonClickListener {
                                 isFullscreen.value = !isFullscreen.value
                             }
+                            setControllerVisibilityListener(
+                                PlayerView.ControllerVisibilityListener { visibility ->
+                                    showControls.value = visibility == View.VISIBLE
+                                }
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (showControls.value) {
+                        IconButton(
+                            onClick = {
+                                if (!isFullscreen.value) {
+                                    activity?.finish()
+                                } else {
+                                    isFullscreen.value = false
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowLeft,
+                                contentDescription = "返回",
+                                tint = Color.White
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                selectedEpisode.value?.let { episode ->
+                                    val shareText = "${episode.title} - ${context.resources.getString(R.string.episode_title, episode.episode)}\n${RetrofitModule.BASE_URL}${episode.id}"
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "分享",
+                                tint = Color.White,
+                                modifier = Modifier.size(CommonMargin.m4)
+                            )
+                        }
+                    }
+                }
 
                 if (isVideoBuffering.value) {
                     Box(
@@ -264,46 +320,58 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
             }
 
             if (!isFullscreen.value) {
-                selectedEpisode.value?.let { episode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = CommonMargin.m4, vertical = CommonMargin.m4),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CommonTextM(
-                            text = "${episode.title} - ${stringResource(R.string.episode_title, episode.episode)}",
-                            maxLines = 2,
-                            textAlign = TextAlign.Start,
-                            bold = true,
-                            modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
-                        )
-
-                        IconButton(
-                            onClick = {
-                                val shareText = "${episode.title} - ${context.resources.getString(R.string.episode_title, episode.episode)}\n${RetrofitModule.BASE_URL}${episode.id}"
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
-                            },
-                            modifier = Modifier.size(CommonMargin.m5)) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "分享",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     )
                 ) {
+                    item {
+                        selectedEpisode.value?.let { episode ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = CommonMargin.m4, vertical = CommonMargin.m4),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CommonTextL(
+                                    text = "${episode.title} - ${stringResource(R.string.episode_title, episode.episode)}",
+                                    textAlign = TextAlign.Start,
+                                    bold = true,
+                                    modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
+                                )
+                                Spacer(modifier = Modifier.width(CommonMargin.m4))
+                                IconButton(
+                                    onClick = {
+                                    },
+                                    modifier = Modifier.size(CommonMargin.m5)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FavoriteBorder,
+                                        contentDescription = "收藏",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(CommonMargin.m4))
+                                IconButton(
+                                    onClick = {
+                                    },
+                                    modifier = Modifier.size(CommonMargin.m5)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = "緩存",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        selectedEpisode.value?.let { episode ->
+                            CommonTextXS(text = stringResource(R.string.update_time, episode.updateTime), modifier = Modifier.padding(start = CommonMargin.m4))
+                        }
+                    }
                     item {
                         EpisodeSection((episodeLoadState.value as? UiState.Success), selectedEpisode)
                     }
