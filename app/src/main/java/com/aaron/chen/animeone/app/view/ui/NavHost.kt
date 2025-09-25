@@ -4,11 +4,11 @@ import CalendarScreen
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,7 +43,7 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Anime : Screen("anime", "動畫列表", Icons.Default.Home)
     object Calendar: Screen("calendar", "時間表", Icons.Default.DateRange)
-    object Record : Screen("record", "觀看紀錄", Icons.Default.Menu)
+    object Record : Screen("record", "觀看紀錄", Icons.Default.Refresh)
     object Favorite : Screen("favorite", "我的收藏", Icons.Default.FavoriteBorder)
-    object Download : Screen("download", "下載管理", Icons.Default.ArrowDropDown)
+    object Download : Screen("download", "下載管理", Icons.Default.List)
 }

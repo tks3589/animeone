@@ -216,12 +216,19 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     ) {
         // Player Section
         if (selectedEpisode.value != null) {
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (isFullscreen.value) Modifier.weight(1f) else Modifier.aspectRatio(16 / 9f))
-                    .background(Color.Black)
-            ) {
+                modifier = if (isFullscreen.value || isLandscape) {
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16 / 9f)
+                        .background(Color.Black)
+                }
+            ){
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
@@ -331,7 +338,10 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = CommonMargin.m4, vertical = CommonMargin.m4),
+                                    .padding(
+                                        horizontal = CommonMargin.m4,
+                                        vertical = CommonMargin.m4
+                                    ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 CommonTextL(
