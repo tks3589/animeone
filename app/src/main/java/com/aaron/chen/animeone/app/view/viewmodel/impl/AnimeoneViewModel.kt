@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeFavoriteBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
@@ -26,6 +27,8 @@ import org.koin.core.component.inject
 class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
     override val timeLineState: MutableStateFlow<UiState<AnimeSeasonTimeLineBean>> = MutableStateFlow(UiState.Idle)
     override val recordState: MutableStateFlow<UiState<List<AnimeRecordBean>>> = MutableStateFlow(UiState.Idle)
+    override val favoriteState: MutableStateFlow<UiState<List<AnimeFavoriteBean>>> = MutableStateFlow(UiState.Idle)
+    override val favoriteBookState: MutableStateFlow<UiState<Boolean>> = MutableStateFlow(UiState.Idle)
     override val episodeState: MutableStateFlow<UiState<List<AnimeEpisodeBean>>> = MutableStateFlow(UiState.Idle)
     override val commentState: MutableStateFlow<UiState<List<AnimeCommentBean>>> = MutableStateFlow(UiState.Idle)
     private val animeRepository: IAnimeoneRepository by inject()
@@ -96,6 +99,40 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
                 }.collect { result ->
                     commentState.value = UiState.Success(result)
                 }
+        }
+    }
+
+    override fun requestFavoriteAnimes() {
+        viewModelScope.launch {
+            animeRepository.requestFavoriteAnimes()
+                .onStart {
+                    favoriteState.value = UiState.Loading
+                }.catch {
+                    favoriteState.value = UiState.Error(it.message)
+                }.collect { result ->
+                    favoriteState.value = UiState.Success(result)
+                }
+        }
+    }
+
+    override fun requestFavoriteState(animeId: String) {
+        viewModelScope.launch {
+            animeRepository.requestFavoriteState(animeId)
+                .collect { result ->
+                    favoriteBookState.value = UiState.Success(result)
+                }
+        }
+    }
+
+    override suspend fun addFavoriteAnime(anime: AnimeFavoriteBean) {
+        viewModelScope.launch {
+            animeRepository.addFavoriteAnime(anime)
+        }
+    }
+
+    override suspend fun removeFavoriteAnime(animeId: String) {
+        viewModelScope.launch {
+            animeRepository.removeFavoriteAnime(animeId)
         }
     }
 }

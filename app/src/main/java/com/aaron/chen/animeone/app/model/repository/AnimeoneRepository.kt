@@ -7,6 +7,7 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeFavoriteBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
@@ -15,6 +16,7 @@ import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.INITIAL_LOAD_SIZE
 import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository.Companion.PAGE_SIZE
+import com.aaron.chen.animeone.database.dao.AnimeFavoriteDao
 import com.aaron.chen.animeone.database.dao.AnimeListDao
 import com.aaron.chen.animeone.database.dao.AnimeRecordDao
 import com.aaron.chen.animeone.database.entity.AnimeEntity
@@ -36,6 +38,7 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
     private var currentPagingSource: PagingSource<Int, AnimeEntity>? = null
     private val animeDao: AnimeListDao by inject()
     private val animeRecordDao: AnimeRecordDao by inject()
+    private val animeFavoriteDao: AnimeFavoriteDao by inject()
     private val animeApiModel: IAnimeoneApiModel by inject()
     private val animeRemoteMediator = AnimeRemoteMediator(animeDao, animeApiModel)
 
@@ -69,11 +72,29 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
         }
     }
 
+    override fun requestFavoriteAnimes(): Flow<List<AnimeFavoriteBean>> {
+        return animeFavoriteDao.getAll().map { entity ->
+            entity.toBean()
+        }
+    }
+
     override fun requestAnimeComments(animeId: String): Flow<List<AnimeCommentBean>> {
         return animeApiModel.requestComments(animeId)
     }
 
+    override fun requestFavoriteState(animeId: String): Flow<Boolean> {
+        return animeFavoriteDao.isFavorite(animeId)
+    }
+
     override suspend fun addRecordAnime(anime: AnimeRecordBean) {
-        return animeRecordDao.insert(anime.toEntity())
+        animeRecordDao.insert(anime.toEntity())
+    }
+
+    override suspend fun addFavoriteAnime(anime: AnimeFavoriteBean) {
+        animeFavoriteDao.insert(anime.toEntity())
+    }
+
+    override suspend fun removeFavoriteAnime(animeId: String) {
+        animeFavoriteDao.deleteFromId(animeId)
     }
 }
