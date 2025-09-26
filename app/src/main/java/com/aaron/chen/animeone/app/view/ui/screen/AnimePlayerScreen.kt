@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Share
@@ -53,6 +54,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +90,7 @@ import coil.request.ImageRequest
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeFavoriteBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.data.bean.MediaBean
@@ -111,6 +114,7 @@ import kotlinx.datetime.Clock
 fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
     val episodeLoadState = viewModel.episodeState.collectAsState(UiState.Idle)
     val commentsLoadState = viewModel.commentState.collectAsState(UiState.Idle)
+    val favoriteBookState = viewModel.favoriteBookState.collectAsState(UiState.Idle)
     val context = LocalContext.current
     val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -121,6 +125,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val configuration = LocalConfiguration.current
     val uiMode = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
     val showControls = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiMode) {
         activity?.window?.also {
@@ -178,6 +183,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
 
     LaunchedEffect(Unit) {
         viewModel.requestAnimeEpisodes(animeId)
+        viewModel.requestFavoriteState(animeId)
     }
 
     LaunchedEffect(episodeLoadState.value) {
@@ -344,25 +350,42 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val favoriteState = (favoriteBookState.value as? UiState.Success)?.data ?: false
                                 CommonTextL(
                                     text = "${episode.title} - ${stringResource(R.string.episode_title, episode.episode)}",
                                     textAlign = TextAlign.Start,
                                     bold = true,
                                     modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
                                 )
-                                Spacer(modifier = Modifier.width(CommonMargin.m4))
+                                Spacer(modifier = Modifier.width(CommonMargin.m5))
                                 IconButton(
                                     onClick = {
+                                        scope.launch {
+                                           if (favoriteState) {
+                                               viewModel.removeFavoriteAnime(animeId)
+                                               Toast.makeText(context, context.resources.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
+                                           } else {
+                                               viewModel.addFavoriteAnime(
+                                                   AnimeFavoriteBean(
+                                                       id = animeId,
+                                                       title = episode.title,
+                                                       episode = episode.episode,
+                                                       session = Clock.System.now().toEpochMilliseconds()
+                                                   )
+                                               )
+                                               Toast.makeText(context, context.resources.getString(R.string.favorite_success), Toast.LENGTH_SHORT).show()
+                                           }
+                                        }
                                     },
                                     modifier = Modifier.size(CommonMargin.m5)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.FavoriteBorder,
+                                        imageVector = if (favoriteState) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = "收藏",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(CommonMargin.m4))
+                                Spacer(modifier = Modifier.width(CommonMargin.m5))
                                 IconButton(
                                     onClick = {
                                     },

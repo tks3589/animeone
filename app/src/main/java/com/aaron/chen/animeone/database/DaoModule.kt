@@ -10,7 +10,7 @@ import org.koin.core.annotation.Single
 @Module
 class DaoModule {
     companion object {
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
         private const val DB_NAME = "animeone.db"
     }
 
@@ -23,9 +23,11 @@ class DaoModule {
 
     private fun getMigrations(): Array<Migration> {
         return arrayOf(
+            DbMigration.MIGRATION_1_2
         )
     }
 
     @Factory fun animeDao(etDataBase: DataBase) = etDataBase.animeListDao()
     @Factory fun animeRecordDao(etDataBase: DataBase) = etDataBase.animeRecordDao()
+    @Factory fun animeFavoriteDao(etDataBase: DataBase) = etDataBase.animeFavoriteDao()
 }

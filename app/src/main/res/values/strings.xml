@@ -4,6 +4,7 @@
     <string name="calendar">時間表</string>
     <string name="record_list">觀看紀錄</string>
     <string name="no_record_list">目前還沒有紀錄ㄛ</string>
+    <string name="no_favorite_list">目前還沒有收藏ㄛ</string>
     <string name="no_comment_list">目前沒有留言。</string>
     <string name="event_list">活動列表</string>
     <string name="loading_text">載入中…</string>
@@ -15,5 +16,7 @@
     <string name="no_newest_anime">當天無新番</string>
     <string name="update_time">更新日期：%1$s</string>
     <string name="my_favorite">我的收藏</string>
+    <string name="favorite_success">收藏成功</string>
+    <string name="favorite_remove">已取消收藏</string>
     <string name="download_manager">下載管理</string>
 </resources>
