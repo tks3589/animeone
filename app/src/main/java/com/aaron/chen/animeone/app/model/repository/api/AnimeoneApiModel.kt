@@ -15,9 +15,10 @@ import com.aaron.chen.animeone.app.model.data.responsevo.toVideo
 import com.aaron.chen.animeone.app.model.repository.api.impl.IAnimeoneApiModel
 import com.aaron.chen.animeone.module.retrofit.IRetrofitApi
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
-import com.aaron.chen.animeone.utils.AnimeSeason.getSeasonTitle
 import com.aaron.chen.animeone.utils.HtmlUtils
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.map
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -36,12 +37,16 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresApi(Build.VERSION_CODES.O)
     override fun getAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean> {
-        val url = RetrofitModule.BASE_URL + getSeasonTitle()
-        return apiModel.getAnimeSeasonTimeLine(requestTag, url).map { html ->
-            HtmlUtils.toAnimeTimeLineRespVo(html).toTimeLine()
-        }
+        return apiModel.getAnimeSeason(requestTag, RetrofitModule.BASE_URL)
+            .map { html -> HtmlUtils.toAnimeSeason(html) }
+            .flatMapConcat { seasonUrlPath ->
+                val url = RetrofitModule.BASE_URL + seasonUrlPath
+                apiModel.getAnimeSeasonTimeLine(requestTag, url)
+                    .map { html -> HtmlUtils.toAnimeTimeLineRespVo(html).toTimeLine() }
+            }
     }
 
     override fun getAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>> {

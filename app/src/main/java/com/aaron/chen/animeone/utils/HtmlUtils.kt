@@ -8,6 +8,11 @@ import com.aaron.chen.animeone.constant.DefaultConst
 import org.jsoup.Jsoup
 
 object HtmlUtils {
+    fun toAnimeSeason(html: String): String {
+        val document = Jsoup.parse(html)
+        return document.getElementById("menu-item-16716")?.text()?.trim() ?: DefaultConst.EMPTY_STRING
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
         val document = Jsoup.parse(html)
@@ -42,7 +47,6 @@ object HtmlUtils {
 
         return result
     }
-
 
     fun toAnimeTimeLineRespVo(html: String): AnimeSeasonTimeLineRespVo {
         val document = Jsoup.parse(html)
