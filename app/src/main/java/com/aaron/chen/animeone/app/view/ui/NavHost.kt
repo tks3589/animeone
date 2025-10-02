@@ -1,6 +1,8 @@
 package com.aaron.chen.animeone.app.view.ui
 
 import CalendarScreen
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -29,6 +31,10 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
     val viewModel: IAnimeoneViewModel = koinViewModel<AnimeoneViewModel>()
     NavHost(
         navController = navController,
+        exitTransition = { ExitTransition.None }, // 關閉預設換頁動畫
+        enterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
         startDestination = Screen.Anime.route,
         modifier = Modifier.padding(innerPadding)
     ) {
