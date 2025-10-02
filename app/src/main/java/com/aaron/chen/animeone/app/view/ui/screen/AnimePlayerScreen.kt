@@ -4,11 +4,13 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.os.Build
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,7 +102,9 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextL
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
+import com.aaron.chen.animeone.app.view.viewmodel.IAnimeDownloadViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeDownloadViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.VideoConst
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
@@ -108,7 +112,9 @@ import com.google.accompanist.placeholder.material.placeholder
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.koin.androidx.compose.koinViewModel
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(UnstableApi::class)
 @Composable
 fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
@@ -126,6 +132,8 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val uiMode = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
     val showControls = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val downloadViewModel = koinViewModel<AnimeDownloadViewModel>()
+    val currentVideo = remember { mutableStateOf<AnimeVideoBean?>(null) }
 
     LaunchedEffect(uiMode) {
         activity?.window?.also {
@@ -317,6 +325,7 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                             isVideoBuffering.value = false
                         }
                         .collect { video ->
+                            currentVideo.value = video
                             player.setMediaSource(getMediaSource(video))
                             player.prepare()
                             player.play()
@@ -360,21 +369,40 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                                 Spacer(modifier = Modifier.width(CommonMargin.m5))
                                 IconButton(
                                     onClick = {
+                                        currentVideo.value?.let {
+                                            downloadViewModel.download(
+                                                url = getVideoSrc(it),
+                                                headers = getVideoHeaders(it.cookie),
+                                                episodeBean = episode
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.size(CommonMargin.m5)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download),
+                                        contentDescription = "緩存",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(CommonMargin.m5))
+                                IconButton(
+                                    onClick = {
                                         scope.launch {
-                                           if (favoriteState) {
-                                               viewModel.removeFavoriteAnime(animeId)
-                                               Toast.makeText(context, context.resources.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
-                                           } else {
-                                               viewModel.addFavoriteAnime(
-                                                   AnimeFavoriteBean(
-                                                       id = animeId,
-                                                       title = episode.title,
-                                                       episode = episode.episode,
-                                                       session = Clock.System.now().toEpochMilliseconds()
-                                                   )
-                                               )
-                                               Toast.makeText(context, context.resources.getString(R.string.favorite_success), Toast.LENGTH_SHORT).show()
-                                           }
+                                            if (favoriteState) {
+                                                viewModel.removeFavoriteAnime(animeId)
+                                                Toast.makeText(context, context.resources.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                viewModel.addFavoriteAnime(
+                                                    AnimeFavoriteBean(
+                                                        id = animeId,
+                                                        title = episode.title,
+                                                        episode = episode.episode,
+                                                        session = Clock.System.now().toEpochMilliseconds()
+                                                    )
+                                                )
+                                                Toast.makeText(context, context.resources.getString(R.string.favorite_success), Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     },
                                     modifier = Modifier.size(CommonMargin.m5)
@@ -382,18 +410,6 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                                     Icon(
                                         imageVector = if (favoriteState) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = "收藏",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(CommonMargin.m5))
-                                IconButton(
-                                    onClick = {
-                                    },
-                                    modifier = Modifier.size(CommonMargin.m5)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.download),
-                                        contentDescription = "緩存",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -483,22 +499,29 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
 
     // comment image dialog
     imageDialogUrl.value?.let { url ->
-        ImageDialog(imageDialogUrl)
+        ImageDialog(imageDialogUrl, downloadViewModel)
     }
 }
 
 @OptIn(UnstableApi::class)
 private fun getMediaSource(video: AnimeVideoBean): MediaSource {
-    val videoSrc = video.src
-    val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
-    val mediaItem = MediaItem.fromUri(fixedUrl)
-    val headers = mapOf(
-        "Cookie" to video.cookie,
+    val mediaItem = MediaItem.fromUri(getVideoSrc(video))
+    val dataSourceFactory = DefaultHttpDataSource.Factory().setDefaultRequestProperties(getVideoHeaders(video.cookie))
+    return ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+}
+
+private fun getVideoHeaders(cookie: String): HashMap<String, String> {
+    return hashMapOf(
+        "Cookie" to cookie,
         "Referer" to RetrofitModule.BASE_URL,
         "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
     )
-    val dataSourceFactory = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
-    return ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+}
+
+private fun getVideoSrc(video: AnimeVideoBean): String {
+    val videoSrc = video.src
+    val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
+    return fixedUrl
 }
 
 @Composable
@@ -707,7 +730,7 @@ private fun Avatar(url: String) {
 }
 
 @Composable
-private fun ImageDialog(imageDialogUrl: MutableState<String?>) {
+private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel: IAnimeDownloadViewModel) {
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Dialog(
@@ -732,8 +755,23 @@ private fun ImageDialog(imageDialogUrl: MutableState<String?>) {
 
             Row(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
+                    .align(Alignment.TopEnd),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                // 下載按鈕
+                IconButton(
+                    modifier = Modifier.size(CommonMargin.m5),
+                    onClick = {
+                        downloadViewModel.download(imageDialogUrl.value ?: DefaultConst.EMPTY_STRING)
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.download),
+                        contentDescription = "下載",
+                        tint = Color.White
+                    )
+                }
+                Spacer(Modifier.size(CommonMargin.m3))
                 // 關閉按鈕
                 IconButton(
                     onClick = {

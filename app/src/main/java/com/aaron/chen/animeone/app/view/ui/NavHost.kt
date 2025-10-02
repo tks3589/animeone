@@ -36,7 +36,7 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
         composable(Screen.Calendar.route) { CalendarScreen(viewModel) }
         composable(Screen.Record.route) { RecordScreen(viewModel) }
         composable(Screen.Favorite.route) { FavoriteScreen(viewModel) }
-        composable(Screen.Download.route) { DownloadScreen(viewModel) }
+        composable(Screen.Download.route) { DownloadScreen() }
     }
 }
 
@@ -45,5 +45,5 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Calendar: Screen("calendar", "時間表", Icons.Default.DateRange)
     object Record : Screen("record", "觀看紀錄", Icons.Default.Refresh)
     object Favorite : Screen("favorite", "我的收藏", Icons.Default.Favorite)
-    object Download : Screen("download", "下載管理", Icons.Default.List)
+    object Download : Screen("download", "下載影片", Icons.Default.List)
 }
