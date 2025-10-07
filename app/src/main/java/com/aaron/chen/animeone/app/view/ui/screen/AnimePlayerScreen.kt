@@ -488,8 +488,10 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                     }
                 }
             }
-        } else if (episodeLoadState.value is UiState.Error || episodeLoadState.value is UiState.Empty) {
-            ErrorText()
+        } else if (episodeLoadState.value is UiState.Error) {
+            ErrorText((episodeLoadState.value as UiState.Error).message)
+        } else if (episodeLoadState.value is UiState.Empty) {
+            ErrorText(stringResource(R.string.episode_empty))
         } else {
            LoadingText()
         }
@@ -576,7 +578,7 @@ private fun ErrorText(message: String? = null) {
         contentAlignment = Alignment.Center
     ) {
         CommonTextS(
-            text = stringResource(R.string.error_text),
+            text = "${stringResource(R.string.error_text)}：$message",
             color = MaterialTheme.colorScheme.error
         )
     }
