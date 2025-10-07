@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -48,7 +49,6 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeDownloadViewModel
 import org.koin.androidx.compose.koinViewModel
-import java.io.File
 
 @Composable
 fun DownloadScreen() {
@@ -162,7 +162,7 @@ fun DownloadScreen() {
                                 .clickable {
                                     // ✅ 刪除影片
                                     selectedItems.value.forEach { path ->
-                                        viewModel.deleteVideo(File(path))
+                                        viewModel.deleteVideo(context, path)
                                     }
                                     selectedItems.value = emptySet()
                                     viewModel.loadDownloadedVideos()
@@ -195,7 +195,7 @@ fun VideoItem(
                     onSelectChange(!isSelected)
                 } else {
                     // ✅ 非編輯模式：開啟影片
-                    val uri = viewModel.getVideoContentUri(context, File(video.path))
+                    val uri = video.path.toUri()
                     val intent = Intent(Intent.ACTION_VIEW).apply {
                         setDataAndType(uri, "video/mp4")
                     }

@@ -129,18 +129,16 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val isVideoBuffering = remember { mutableStateOf(true) }
     val imageDialogUrl = remember { mutableStateOf<String?>(null) }
     val configuration = LocalConfiguration.current
-    val uiMode = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
     val showControls = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val downloadViewModel = koinViewModel<AnimeDownloadViewModel>()
     val currentVideo = remember { mutableStateOf<AnimeVideoBean?>(null) }
 
-    LaunchedEffect(uiMode) {
+    LaunchedEffect(Unit) {
         activity?.window?.also {
-            val isLight = uiMode != Configuration.UI_MODE_NIGHT_YES
             val controller = WindowCompat.getInsetsController(it, it.decorView)
-            controller.isAppearanceLightStatusBars = isLight
-            controller.isAppearanceLightNavigationBars = isLight
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
         }
     }
 
@@ -731,17 +729,16 @@ private fun Avatar(url: String) {
 
 @Composable
 private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel: IAnimeDownloadViewModel) {
-    val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Dialog(
         onDismissRequest = { imageDialogUrl.value = null },
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.95f))
-                .padding(top = topPadding, bottom = bottomPadding)
         ) {
             // 圖片內容（置中）
             SubcomposeAsyncImage(

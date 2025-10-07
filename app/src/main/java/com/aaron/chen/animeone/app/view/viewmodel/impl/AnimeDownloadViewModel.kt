@@ -10,14 +10,13 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aaron.chen.animeone.app.model.data.bean.AnimeDownloadBean
@@ -187,83 +186,94 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
         }
     }
 
-    fun deleteVideo(file: File) {
-        if (file.exists()) {
-            file.delete()
+    fun deleteVideo(context: Context, path: String): Boolean {
+        return try {
+            val rowsDeleted = context.contentResolver.delete(path.toUri(), null, null)
+            rowsDeleted > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 
-
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun loadDownloadedVideos() {
         viewModelScope.launch(Dispatchers.IO) {
-            Log.d("aaron_tt", "loadDownloadedVideos_loading")
-            //loadVideoState.value = UiState.Loading
             try {
-                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val targetDir = File(downloadDir, "MxAnime")
+                // ✅ 1. 查詢 MediaStore 中「Download/MxAnime」資料夾下的 mp4
+                val projection = arrayOf(
+                    MediaStore.Video.Media._ID,
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    MediaStore.Video.Media.DATE_MODIFIED
+                )
 
-                // ✅ 1. 取得所有 mp4 檔案
-                val files = targetDir.listFiles()?.filter {
-                    it.isFile && it.name.startsWith(VideoConst.ANIME_TAG) && it.name.endsWith(".mp4")
-                }.orEmpty()
+                val selection = "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ? AND ${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?"
+                val selectionArgs = arrayOf("%Download/MxAnime%", "${VideoConst.ANIME_TAG}%.mp4")
 
-                Log.d("aaron_tt", "file: $files")
+                val sortOrder = "${MediaStore.Video.Media.DATE_MODIFIED} DESC"
 
-                // ✅ 2. 按照最後修改時間排序（最新的排最前面）
-                val sortedFiles = files.sortedByDescending { it.lastModified() }
+                val result = mutableListOf<AnimeDownloadBean>()
 
-                // ✅ 3. 建立結果列表
-                val result = sortedFiles.map { file ->
-                    val frame = extractMiddleFrame(file.path)
-                    AnimeDownloadBean(
-                        name = file.name.split("_", limit = 4).drop(3).joinToString("_"),
-                        path = file.path,
-                        preview = frame
-                    )
+                context.contentResolver.query(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    sortOrder
+                )?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
+
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idCol)
+                        val displayName = cursor.getString(nameCol)
+
+                        // ✅ 建立 content:// URI（不再用 File 路徑）
+                        val contentUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+
+                        // ✅ 擷取影片中間縮圖（支援 contentUri）
+                        val frame = extractMiddleFrame(contentUri.toString())
+
+                        result.add(
+                            AnimeDownloadBean(
+                                name = displayName.split("_", limit = 4).drop(3).joinToString("_"),
+                                path = contentUri.toString(), // 改用 content://
+                                preview = frame
+                            )
+                        )
+                    }
                 }
 
-                // ✅ 4. 更新 UI 狀態
+                // ✅ 2. 更新 UI 狀態
                 if (result.isEmpty()) {
                     loadVideoState.value = UiState.Empty
-                    Log.d("aaron_tt", "loadDownloadedVideos_empty")
                 } else {
                     loadVideoState.value = UiState.Success(result)
-                    Log.d("aaron_tt", "loadDownloadedVideos_success_${result.map { it.name }}")
                 }
+
             } catch (e: Exception) {
                 loadVideoState.value = UiState.Error(e.message)
-                Log.d("aaron_tt", "loadDownloadedVideos_error_${e.message}")
             }
         }
     }
-
-
-    fun getVideoContentUri(context: Context, file: File): Uri? {
-        val projection = arrayOf(MediaStore.Video.Media._ID)
-        val selection = MediaStore.Video.Media.DATA + "=?"
-        val selectionArgs = arrayOf(file.absolutePath)
-
-        context.contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            null
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID))
-                return ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
-            }
-        }
-        return null
-    }
-
 
     private fun extractMiddleFrame(path: String): Bitmap? {
         return try {
             val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(path)
+
+            // ✅ 根據 path 判斷是 contentUri 還是檔案路徑
+            if (path.startsWith("content://")) {
+                retriever.setDataSource(context, path.toUri())
+            } else {
+                retriever.setDataSource(path)
+            }
+
             val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+            if (duration <= 0L) {
+                retriever.release()
+                return null
+            }
+
             val middleUs = (duration / 2) * 1000
             val frame = retriever.getFrameAtTime(middleUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
             retriever.release()

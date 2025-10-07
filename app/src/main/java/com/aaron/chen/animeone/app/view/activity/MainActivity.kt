@@ -1,10 +1,12 @@
 package com.aaron.chen.animeone.app.view.activity
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,9 +18,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,15 +33,18 @@ import com.aaron.chen.animeone.app.view.ui.AnimeNavHost
 import com.aaron.chen.animeone.app.view.ui.Screen
 import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
+import com.aaron.chen.animeone.app.view.ui.widget.CustomAlertDialog
+import com.aaron.chen.animeone.app.view.ui.widget.DialogType
 
 class MainActivity : ComponentActivity() {
+    private val showPermissionDialogState: MutableState<DialogType?> = mutableStateOf(null)
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
                 if (!hasNotificationPermission()) {
-                    Toast.makeText(this, "需要通知權限！", Toast.LENGTH_SHORT).show()
+                    showPermissionDialogState.value = DialogType.PERMISSION_NOTIFICATION
                 } else if (!hasReadMediaPermission()) {
-                    Toast.makeText(this, "需要讀取影片權限！", Toast.LENGTH_SHORT).show()
+                    showPermissionDialogState.value = DialogType.PERMISSION_VIDEO_STORAGE
                 }
             } else {
                 requestPermissions()
@@ -44,10 +53,28 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
         requestPermissions()
         setContent {
             AnimeoneTheme {
-                BottomNavApp()
+                BottomNavApp(showPermissionDialogState)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        showPermissionDialogState.value?.let { dialogType ->
+            val permissionGranted = when (dialogType) {
+                DialogType.PERMISSION_NOTIFICATION -> hasNotificationPermission()
+                DialogType.PERMISSION_VIDEO_STORAGE -> hasReadMediaPermission()
+            }
+            if (permissionGranted) {
+                showPermissionDialogState.value = null
+                requestPermissions()
             }
         }
     }
@@ -79,7 +106,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BottomNavApp() {
+fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -107,6 +134,25 @@ fun BottomNavApp() {
         }
     ) { innerPadding ->
         AnimeNavHost(innerPadding, navController)
+        PermissionDialogDisplay(showPermissionDialogState)
+    }
+}
+
+@Composable
+private fun PermissionDialogDisplay(showPermissionDialogState: MutableState<DialogType?>) {
+    val context = LocalContext.current
+    showPermissionDialogState.value?.let { dialogType ->
+        CustomAlertDialog(
+            type = dialogType,
+            onConfirm = {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                )
+            },
+            onDismiss = {}
+        )
     }
 }
 
