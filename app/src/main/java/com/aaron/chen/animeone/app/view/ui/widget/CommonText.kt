@@ -53,6 +53,26 @@ fun CommonTextS(
 }
 
 @Composable
+fun CommonTextXL(
+    text: String,
+    modifier: Modifier = Modifier,
+    bold: Boolean = false,
+    textAlign: TextAlign = TextAlign.Center,
+    color: Color = MaterialTheme.colorScheme.onBackground,
+    maxLines: Int = Int.MAX_VALUE
+) {
+    CommonTextBase(
+        text = text,
+        fontSize = FontSize.xl,
+        modifier = modifier,
+        bold = bold,
+        textAlign = textAlign,
+        color = color,
+        maxLines = maxLines
+    )
+}
+
+@Composable
 fun CommonTextL(
     text: String,
     modifier: Modifier = Modifier,
