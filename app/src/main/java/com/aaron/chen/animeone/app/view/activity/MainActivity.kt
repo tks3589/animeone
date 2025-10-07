@@ -35,6 +35,7 @@ import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CustomAlertDialog
 import com.aaron.chen.animeone.app.view.ui.widget.DialogType
+import com.aaron.chen.animeone.constant.ExtraConst
 
 class MainActivity : ComponentActivity() {
     private val showPermissionDialogState: MutableState<DialogType?> = mutableStateOf(null)
@@ -117,13 +118,20 @@ fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>) {
                     NavigationBarItem(
                         selected = currentRoute == screen.route,
                         onClick = {
-                            navController.navigate(screen.route) {
-                                // 避免重複堆疊
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            when {
+                                currentRoute == Screen.Anime.route && screen.route == Screen.Anime.route -> {
+                                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                                        ExtraConst.SCROLL_TO_TOP, true
+                                    )
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                                currentRoute != screen.route -> {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
                         },
                         icon = { Icon(screen.icon, contentDescription = screen.title, modifier = Modifier.size(CommonMargin.m5)) },

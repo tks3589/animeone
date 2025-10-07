@@ -9,6 +9,7 @@
     <string name="event_list">活動列表</string>
     <string name="loading_text">載入中…</string>
     <string name="error_text">載入失敗</string>
+    <string name="episode_empty">章節是空的</string>
     <string name="episode_title">第 %1$d 話</string>
     <string name="share_to">分享到</string>
     <string name="comment_board">留言板</string>

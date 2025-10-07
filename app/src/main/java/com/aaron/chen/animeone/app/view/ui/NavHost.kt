@@ -38,7 +38,7 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
         startDestination = Screen.Anime.route,
         modifier = Modifier.padding(innerPadding)
     ) {
-        composable(Screen.Anime.route) { AnimeScreen(viewModel) }
+        composable(Screen.Anime.route) { AnimeScreen(navController, viewModel) }
         composable(Screen.Calendar.route) { CalendarScreen(viewModel) }
         composable(Screen.Record.route) { RecordScreen(viewModel) }
         composable(Screen.Favorite.route) { FavoriteScreen(viewModel) }

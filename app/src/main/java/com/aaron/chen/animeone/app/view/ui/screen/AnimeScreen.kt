@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -24,9 +25,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
@@ -50,14 +54,34 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
 import com.aaron.chen.animeone.database.entity.AnimeEntity
+import kotlinx.coroutines.launch
 
 @Composable
 fun AnimeScreen(
+    navController: NavHostController,
     viewModel: IAnimeoneViewModel
 ) {
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimeList().collectAsLazyPagingItems()
     var searchQuery by remember { mutableStateOf(DefaultConst.EMPTY_STRING) }
+    val scrollToTopTriggerFlow = navController.currentBackStackEntry?.savedStateHandle
+        ?.getStateFlow(ExtraConst.SCROLL_TO_TOP, false)
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        listState.scrollToItem(0) // 進來就滾回top
+        scrollToTopTriggerFlow?.collect { scrollToTop ->
+            if (scrollToTop) {
+                listState.scrollToItem(0)
+                animeItems.refresh()
+                navController.currentBackStackEntry?.savedStateHandle?.set(
+                    ExtraConst.SCROLL_TO_TOP,
+                    false
+                )
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -67,7 +91,12 @@ fun AnimeScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = {
+                    searchQuery = it
+                    coroutineScope.launch {
+                        listState.scrollToItem(0)
+                    }
+                },
                 placeholder = { Text(stringResource(R.string.search_anime)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -84,6 +113,7 @@ fun AnimeScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(CommonMargin.m2)
                 ) {
                     when (val state = animeItems.loadState.refresh) {

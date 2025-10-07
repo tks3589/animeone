@@ -4,4 +4,5 @@ object ExtraConst {
     val ANIME_ID = "animeId"
     val EPISODE = "episode"
     val PLAY_LAST = "playLast"
+    val SCROLL_TO_TOP = "scrollToTop"
 }
