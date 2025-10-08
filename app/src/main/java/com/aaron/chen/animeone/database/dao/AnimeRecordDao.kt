@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AnimeRecordDao {
-    @Query("SELECT * FROM ${AnimeRecordEntity.TABLE_NAME} ORDER BY ${AnimeRecordEntity.SESSION} DESC LIMIT 20")
+    @Query("SELECT * FROM ${AnimeRecordEntity.TABLE_NAME} ORDER BY ${AnimeRecordEntity.SESSION} DESC")
     fun getAll(): Flow<List<AnimeRecordEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

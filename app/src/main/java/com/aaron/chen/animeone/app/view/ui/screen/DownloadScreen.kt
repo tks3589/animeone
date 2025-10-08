@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,6 +40,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeDownloadBean
 import com.aaron.chen.animeone.app.model.state.UiState
@@ -53,7 +53,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun DownloadScreen() {
     val viewModel = koinViewModel<AnimeDownloadViewModel>()
-    val loadVideoState = viewModel.loadVideoState.collectAsState(UiState.Idle)
+    val loadVideoState = viewModel.loadVideoState.collectAsStateWithLifecycle(UiState.Idle)
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 

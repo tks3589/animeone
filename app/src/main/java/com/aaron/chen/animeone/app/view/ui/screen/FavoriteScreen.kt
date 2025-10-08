@@ -15,12 +15,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
@@ -33,7 +33,7 @@ import com.aaron.chen.animeone.constant.ExtraConst
 @Composable
 fun FavoriteScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
-    val uiState = viewModel.favoriteState.collectAsState(UiState.Idle)
+    val uiState = viewModel.favoriteState.collectAsStateWithLifecycle(UiState.Idle)
 
     LaunchedEffect(Unit) {
         viewModel.requestFavoriteAnimes()
