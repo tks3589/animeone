@@ -20,7 +20,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
@@ -44,7 +44,7 @@ import java.time.LocalDate
 @Composable
 fun CalendarScreen(viewModel: IAnimeoneViewModel) {
     val context = LocalContext.current
-    val uiState = viewModel.timeLineState.collectAsState(UiState.Idle)
+    val uiState = viewModel.timeLineState.collectAsStateWithLifecycle(UiState.Idle)
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")
     val coroutineScope = rememberCoroutineScope()
     val todayIndex = (LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6)

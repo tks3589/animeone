@@ -53,7 +53,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,6 +74,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -118,9 +118,9 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(UnstableApi::class)
 @Composable
 fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
-    val episodeLoadState = viewModel.episodeState.collectAsState(UiState.Idle)
-    val commentsLoadState = viewModel.commentState.collectAsState(UiState.Idle)
-    val favoriteBookState = viewModel.favoriteBookState.collectAsState(UiState.Idle)
+    val episodeLoadState = viewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
+    val commentsLoadState = viewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
+    val favoriteBookState = viewModel.favoriteBookState.collectAsStateWithLifecycle(UiState.Idle)
     val context = LocalContext.current
     val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current

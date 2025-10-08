@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +49,7 @@ import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
+import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
 import com.aaron.chen.animeone.app.view.ui.widget.PullToRefresh
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
@@ -119,11 +121,10 @@ fun AnimeScreen(
                     when (val state = animeItems.loadState.refresh) {
                         is LoadState.Error -> {
                             item {
-                                Text(
-                                    text = "${stringResource(R.string.error_text)}: ${state.error.localizedMessage}",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(CommonMargin.m4)
+                                CommonTextS(
+                                    text = "${stringResource(R.string.error_text)} : ${state.error.localizedMessage}",
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Start
                                 )
                             }
                         }
