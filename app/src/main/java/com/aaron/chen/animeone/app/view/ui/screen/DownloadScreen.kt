@@ -111,13 +111,13 @@ fun DownloadScreen() {
             }
             UiState.Empty -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CommonTextS(text = "沒有下載影片")
+                    CommonTextS(text = stringResource(R.string.download_video_empty))
                 }
             }
             is UiState.Error -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CommonTextS(
-                        text = "讀取失敗",
+                        text = stringResource(R.string.error_text),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -129,7 +129,6 @@ fun DownloadScreen() {
                         VideoItem(
                             context = context,
                             video = videos[index],
-                            viewModel = viewModel,
                             isEditing = isEditing.value,
                             isSelected = selectedItems.value.contains(videos[index].path),
                             onSelectChange = { checked ->
@@ -180,7 +179,6 @@ fun DownloadScreen() {
 fun VideoItem(
     context: Context,
     video: AnimeDownloadBean,
-    viewModel: AnimeDownloadViewModel,
     isEditing: Boolean,
     isSelected: Boolean,
     onSelectChange: (Boolean) -> Unit

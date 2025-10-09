@@ -11,16 +11,13 @@ import androidx.annotation.RequiresApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.aaron.chen.animeone.app.view.ui.screen.AnimePlayerScreen
 import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
-import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
-import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AnimePlayerActivity : ComponentActivity() {
-    private val viewModel: IAnimeoneViewModel by viewModel<AnimeoneViewModel>()
     private lateinit var player: ExoPlayer
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -33,12 +30,11 @@ class AnimePlayerActivity : ComponentActivity() {
 
         setContent {
             AnimeoneTheme {
-                AnimePlayerScreen(viewModel = viewModel, player = player, animeId = animeId, episode = episode, playLast = playLast)
+                AnimePlayerScreen(player = player, animeId = animeId, episode = episode, playLast = playLast)
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
 

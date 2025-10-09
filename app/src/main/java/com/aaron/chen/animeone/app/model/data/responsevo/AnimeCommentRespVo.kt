@@ -1,7 +1,5 @@
 package com.aaron.chen.animeone.app.model.data.responsevo
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AvatarBean
 import com.aaron.chen.animeone.app.model.data.bean.MediaBean
@@ -73,7 +71,6 @@ class CommentRespVo {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun AnimeCommentRespVo.toCommentList(): List<AnimeCommentBean> {
     return data!!.map { comment ->
         AnimeCommentBean(

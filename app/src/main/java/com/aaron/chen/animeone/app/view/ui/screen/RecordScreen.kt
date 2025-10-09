@@ -27,12 +27,14 @@ import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
 import com.aaron.chen.animeone.constant.ExtraConst
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun RecordScreen(viewModel: IAnimeoneViewModel) {
+fun RecordScreen() {
     val context = LocalContext.current
+    val viewModel = koinViewModel<AnimeStorageViewModel>()
     val uiState = viewModel.recordState.collectAsStateWithLifecycle(UiState.Idle)
 
     LaunchedEffect(Unit) {
