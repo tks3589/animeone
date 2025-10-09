@@ -3,8 +3,6 @@ package com.aaron.chen.animeone.app.view.viewmodel
 import androidx.paging.PagingData
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
-import com.aaron.chen.animeone.app.model.data.bean.AnimeFavoriteBean
-import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeSeasonTimeLineBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.state.UiState
@@ -14,9 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface IAnimeoneViewModel {
     val timeLineState: StateFlow<UiState<AnimeSeasonTimeLineBean>>
-    val recordState: StateFlow<UiState<List<AnimeRecordBean>>>
-    val favoriteState: StateFlow<UiState<List<AnimeFavoriteBean>>>
-    val favoriteBookState: StateFlow<UiState<Boolean>>
     val episodeState: StateFlow<UiState<List<AnimeEpisodeBean>>>
     val commentState: StateFlow<UiState<List<AnimeCommentBean>>>
 
@@ -24,11 +19,5 @@ interface IAnimeoneViewModel {
     fun requestAnimeSeasonTimeLine()
     fun requestAnimeEpisodes(animeId: String)
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
-    fun requestRecordAnimes()
-    suspend fun addRecordAnime(anime: AnimeRecordBean)
     fun requestAnimeComments(animeId: String)
-    fun requestFavoriteAnimes()
-    fun requestFavoriteState(animeId: String)
-    suspend fun addFavoriteAnime(anime: AnimeFavoriteBean)
-    suspend fun removeFavoriteAnime(animeId: String)
 }

@@ -21,14 +21,10 @@ import com.aaron.chen.animeone.app.view.ui.screen.AnimeScreen
 import com.aaron.chen.animeone.app.view.ui.screen.DownloadScreen
 import com.aaron.chen.animeone.app.view.ui.screen.FavoriteScreen
 import com.aaron.chen.animeone.app.view.ui.screen.RecordScreen
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
-import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
-import org.koin.androidx.compose.koinViewModel
 
 // 定義bottom nav的頁面與route
 @Composable
 fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) {
-    val viewModel: IAnimeoneViewModel = koinViewModel<AnimeoneViewModel>()
     NavHost(
         navController = navController,
         exitTransition = { ExitTransition.None }, // 關閉預設換頁動畫
@@ -38,10 +34,10 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
         startDestination = Screen.Anime.route,
         modifier = Modifier.padding(innerPadding)
     ) {
-        composable(Screen.Anime.route) { AnimeScreen(navController, viewModel) }
-        composable(Screen.Calendar.route) { CalendarScreen(viewModel) }
-        composable(Screen.Record.route) { RecordScreen(viewModel) }
-        composable(Screen.Favorite.route) { FavoriteScreen(viewModel) }
+        composable(Screen.Anime.route) { AnimeScreen(navController) }
+        composable(Screen.Calendar.route) { CalendarScreen() }
+        composable(Screen.Record.route) { RecordScreen() }
+        composable(Screen.Favorite.route) { FavoriteScreen() }
         composable(Screen.Download.route) { DownloadScreen() }
     }
 }

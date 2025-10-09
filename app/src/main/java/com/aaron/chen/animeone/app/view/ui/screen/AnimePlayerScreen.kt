@@ -52,7 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,20 +74,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImage
-import coil.decode.GifDecoder
-import coil.request.CachePolicy
-import coil.request.ImageRequest
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
@@ -102,12 +94,16 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextL
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeDownloadViewModel
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeDownloadViewModel
-import com.aaron.chen.animeone.constant.DefaultConst
-import com.aaron.chen.animeone.constant.VideoConst
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
+import com.aaron.chen.animeone.utils.MediaUtils.getImageRequest
+import com.aaron.chen.animeone.utils.MediaUtils.getMediaSource
+import com.aaron.chen.animeone.utils.MediaUtils.getVideoHeaders
+import com.aaron.chen.animeone.utils.MediaUtils.getVideoSrc
+import com.aaron.chen.animeone.utils.MediaUtils.splitMessageWithMedia
+import com.aaron.chen.animeone.utils.MessagePart
 import com.google.accompanist.placeholder.material.placeholder
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
@@ -117,10 +113,12 @@ import org.koin.androidx.compose.koinViewModel
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(UnstableApi::class)
 @Composable
-fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
-    val episodeLoadState = viewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
-    val commentsLoadState = viewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
-    val favoriteBookState = viewModel.favoriteBookState.collectAsStateWithLifecycle(UiState.Idle)
+fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
+    val animeoneViewModel = koinViewModel<AnimeoneViewModel>()
+    val storageViewModel = koinViewModel<AnimeStorageViewModel>()
+    val episodeLoadState = animeoneViewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
+    val commentsLoadState = animeoneViewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
+    val favoriteBookState = storageViewModel.bookState.collectAsStateWithLifecycle(UiState.Idle)
     val context = LocalContext.current
     val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -128,18 +126,18 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     val isFullscreen = remember { mutableStateOf(false) }
     val isVideoBuffering = remember { mutableStateOf(true) }
     val imageDialogUrl = remember { mutableStateOf<String?>(null) }
-    val configuration = LocalConfiguration.current
-    val showControls = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val downloadViewModel = koinViewModel<AnimeDownloadViewModel>()
     val currentVideo = remember { mutableStateOf<AnimeVideoBean?>(null) }
 
     LaunchedEffect(Unit) {
-        activity?.window?.also {
+        activity?.window?.let {
             val controller = WindowCompat.getInsetsController(it, it.decorView)
             controller.isAppearanceLightStatusBars = false
             controller.isAppearanceLightNavigationBars = false
         }
+        animeoneViewModel.requestAnimeEpisodes(animeId)
+        storageViewModel.requestBookState(animeId)
     }
 
     DisposableEffect(player) {
@@ -187,11 +185,6 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.requestAnimeEpisodes(animeId)
-        viewModel.requestFavoriteState(animeId)
-    }
-
     LaunchedEffect(episodeLoadState.value) {
         val state = episodeLoadState.value
         if (state is UiState.Success && state.data.isNotEmpty()) {
@@ -207,6 +200,34 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
     LaunchedEffect(imageDialogUrl.value) {
         if (imageDialogUrl.value != null) {
             player.pause()
+        }
+    }
+
+    LaunchedEffect(selectedEpisode.value) {
+        val episodeBean = selectedEpisode.value
+        isVideoBuffering.value = true
+        episodeBean?.let {
+            launch {
+                animeoneViewModel.requestAnimeVideo(it.dataApireq)
+                    .catch { error ->
+                        Toast.makeText(context, "${context.resources.getString(R.string.error_text)}：${error.message}", Toast.LENGTH_SHORT).show()
+                        isVideoBuffering.value = false
+                    }
+                    .collect { video ->
+                        currentVideo.value = video
+                        player.setMediaSource(getMediaSource(video))
+                        player.prepare()
+                        player.play()
+
+                        val session = Clock.System.now().toEpochMilliseconds()
+                        val title = "${it.title} ${context.resources.getString(R.string.episode_title, it.episode)}"
+                        storageViewModel.addRecordAnime(AnimeRecordBean(id = animeId, title = title, episode = it.episode, session = session))
+                    }
+            }
+            launch {
+                //loading comments
+                animeoneViewModel.requestAnimeComments(it.id)
+            }
         }
     }
 
@@ -226,119 +247,28 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
             .padding(if (isFullscreen.value) PaddingValues(0.dp) else WindowInsets.statusBars.asPaddingValues())
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Player Section
         if (selectedEpisode.value != null) {
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            Box(
-                modifier = if (isFullscreen.value || isLandscape) {
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                } else {
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16 / 9f)
-                        .background(Color.Black)
-                }
-            ){
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            this.player = player
-                            useController = true
-                            setFullscreenButtonClickListener {
-                                isFullscreen.value = !isFullscreen.value
-                            }
-                            setControllerVisibilityListener(
-                                PlayerView.ControllerVisibilityListener { visibility ->
-                                    showControls.value = visibility == View.VISIBLE
-                                }
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    if (showControls.value) {
-                        IconButton(
-                            onClick = {
-                                if (!isFullscreen.value) {
-                                    activity?.finish()
-                                } else {
-                                    isFullscreen.value = false
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowLeft,
-                                contentDescription = "返回",
-                                tint = Color.White
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                selectedEpisode.value?.let { episode ->
-                                    val shareText = "${episode.title} - ${context.resources.getString(R.string.episode_title, episode.episode)}\n${RetrofitModule.BASE_URL}${episode.id}"
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "分享",
-                                tint = Color.White,
-                                modifier = Modifier.size(CommonMargin.m4)
-                            )
-                        }
+            PlayerSection(
+                player = player,
+                isFullscreen = isFullscreen.value,
+                onToggleFullscreen = { isFullscreen.value = !isFullscreen.value },
+                onExit = {
+                    if (!isFullscreen.value) {
+                        activity?.finish()
+                    } else {
+                        isFullscreen.value = false
                     }
-                }
-
-                if (isVideoBuffering.value) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color.White)
+                },
+                selectedEpisode = selectedEpisode.value,
+                onShare = { shareText ->
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
                     }
-                }
-            }
-
-            LaunchedEffect(selectedEpisode.value) {
-                val episodeBean = selectedEpisode.value!!
-                isVideoBuffering.value = true
-                launch {
-                    viewModel.requestAnimeVideo(episodeBean.dataApireq)
-                        .catch {
-                            Toast.makeText(context, "${context.resources.getString(R.string.error_text)}：${it.message}", Toast.LENGTH_SHORT).show()
-                            isVideoBuffering.value = false
-                        }
-                        .collect { video ->
-                            currentVideo.value = video
-                            player.setMediaSource(getMediaSource(video))
-                            player.prepare()
-                            player.play()
-
-                            val session = Clock.System.now().toEpochMilliseconds()
-                            val title = "${episodeBean.title} ${context.resources.getString(R.string.episode_title, episodeBean.episode)}"
-                            viewModel.addRecordAnime(AnimeRecordBean(id = animeId, title = title, episode = episodeBean.episode, session = session))
-                        }
-                }
-                launch {
-                    //loading comments
-                    viewModel.requestAnimeComments(episodeBean.id)
-                }
-            }
-
+                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
+                },
+                isVideoBuffering = isVideoBuffering.value
+            )
             if (!isFullscreen.value) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -347,72 +277,36 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                     )
                 ) {
                     item {
-                        selectedEpisode.value?.let { episode ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        horizontal = CommonMargin.m4,
-                                        vertical = CommonMargin.m4
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val favoriteState = (favoriteBookState.value as? UiState.Success)?.data ?: false
-                                CommonTextL(
-                                    text = "${episode.title} - ${stringResource(R.string.episode_title, episode.episode)}",
-                                    textAlign = TextAlign.Start,
-                                    bold = true,
-                                    modifier = Modifier.weight(1f) // 左邊文字占滿剩餘空間
+                        AnimeTitleSection(
+                            episode = selectedEpisode.value,
+                            video = currentVideo.value,
+                            isFavorite = (favoriteBookState.value as? UiState.Success)?.data ?: false,
+                            onDownload = { video, episode ->
+                                downloadViewModel.download(
+                                    url = getVideoSrc(video),
+                                    headers = getVideoHeaders(video.cookie),
+                                    episodeBean = episode
                                 )
-                                Spacer(modifier = Modifier.width(CommonMargin.m5))
-                                IconButton(
-                                    onClick = {
-                                        currentVideo.value?.let {
-                                            downloadViewModel.download(
-                                                url = getVideoSrc(it),
-                                                headers = getVideoHeaders(it.cookie),
-                                                episodeBean = episode
+                            },
+                            onToggleFavorite = { episode, isFavorite ->
+                                scope.launch {
+                                    if (isFavorite) {
+                                        storageViewModel.unbookAnime(animeId)
+                                        Toast.makeText(context, context.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        storageViewModel.bookAnime(
+                                            AnimeFavoriteBean(
+                                                id = animeId,
+                                                title = episode.title,
+                                                episode = episode.episode,
+                                                session = Clock.System.now().toEpochMilliseconds()
                                             )
-                                        }
-                                    },
-                                    modifier = Modifier.size(CommonMargin.m5)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.download),
-                                        contentDescription = "緩存",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(CommonMargin.m5))
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            if (favoriteState) {
-                                                viewModel.removeFavoriteAnime(animeId)
-                                                Toast.makeText(context, context.resources.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                viewModel.addFavoriteAnime(
-                                                    AnimeFavoriteBean(
-                                                        id = animeId,
-                                                        title = episode.title,
-                                                        episode = episode.episode,
-                                                        session = Clock.System.now().toEpochMilliseconds()
-                                                    )
-                                                )
-                                                Toast.makeText(context, context.resources.getString(R.string.favorite_success), Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.size(CommonMargin.m5)
-                                ) {
-                                    Icon(
-                                        imageVector = if (favoriteState) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = "收藏",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                        )
+                                        Toast.makeText(context, context.getString(R.string.favorite_success), Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
-                        }
+                        )
                     }
                     item {
                         selectedEpisode.value?.let { episode ->
@@ -420,7 +314,11 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                         }
                     }
                     item {
-                        EpisodeSection((episodeLoadState.value as? UiState.Success), selectedEpisode)
+                        EpisodeSection(
+                            episodes = (episodeLoadState.value as? UiState.Success)?.data.orEmpty(),
+                            selectedEpisode = selectedEpisode.value,
+                            onSelectEpisode = { selectedEpisode.value = it }
+                        )
                     }
                     // Comment 區塊標題
                     item {
@@ -467,21 +365,12 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
                         }
 
                         is UiState.Success -> {
-                            if (state.data.isEmpty()) {
-                                item {
-                                    CommonTextS(
-                                        text = stringResource(R.string.no_comment_list),
-                                        modifier = Modifier.padding(CommonMargin.m4),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            } else {
-                                // 每個留言獨立成 LazyColumn item
-                                items(state.data, key = { it.id }) { comment ->
-                                    Column(modifier = Modifier.padding(horizontal = CommonMargin.m4)) {
-                                        CommentItem(comment, imageDialogUrl)
-                                        Divider(modifier = Modifier.padding(vertical = CommonMargin.m2))
+                            items(state.data, key = { it.id }) { comment ->
+                                Column(modifier = Modifier.padding(horizontal = CommonMargin.m4)) {
+                                    CommentItem(comment) {
+                                        imageDialogUrl.value = it
                                     }
+                                    Divider(modifier = Modifier.padding(vertical = CommonMargin.m2))
                                 }
                             }
                         }
@@ -499,42 +388,172 @@ fun AnimePlayerScreen(viewModel: IAnimeoneViewModel, player: ExoPlayer, animeId:
 
     // comment image dialog
     imageDialogUrl.value?.let { url ->
-        ImageDialog(imageDialogUrl, downloadViewModel)
+        ImageDialog(
+            imageUrl = url,
+            onDismiss = { imageDialogUrl.value = null },
+            onDownload = {
+                downloadViewModel.download(url)
+            }
+        )
     }
 }
 
-@OptIn(UnstableApi::class)
-private fun getMediaSource(video: AnimeVideoBean): MediaSource {
-    val mediaItem = MediaItem.fromUri(getVideoSrc(video))
-    val dataSourceFactory = DefaultHttpDataSource.Factory().setDefaultRequestProperties(getVideoHeaders(video.cookie))
-    return ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-}
+@Composable
+private fun PlayerSection(
+    player: ExoPlayer,
+    isFullscreen: Boolean,
+    onToggleFullscreen: () -> Unit,
+    onExit: () -> Unit,
+    selectedEpisode: AnimeEpisodeBean?,
+    onShare: (String) -> Unit,
+    isVideoBuffering: Boolean
+) {
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val context = LocalContext.current
+    val isWideMode = isFullscreen || isLandscape
+    val showControls = remember { mutableStateOf(false) }
+    Box(
+        modifier = if (isWideMode) {
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(16 / 9f)
+                .background(Color.Black)
+        }
+    ){
+        AndroidView(
+            factory = {
+                PlayerView(context).apply {
+                    this.player = player
+                    useController = true
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener { visibility ->
+                            showControls.value = visibility == View.VISIBLE
+                        }
+                    )
+                    setFullscreenButtonClickListener { onToggleFullscreen() }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
 
-private fun getVideoHeaders(cookie: String): HashMap<String, String> {
-    return hashMapOf(
-        "Cookie" to cookie,
-        "Referer" to RetrofitModule.BASE_URL,
-        "User-Agent" to VideoConst.USER_AGENTS_LIST.random()
-    )
-}
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            if (showControls.value) {
+                IconButton(
+                    onClick = { onExit() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowLeft,
+                        contentDescription = "返回",
+                        tint = Color.White
+                    )
+                }
 
-private fun getVideoSrc(video: AnimeVideoBean): String {
-    val videoSrc = video.src
-    val fixedUrl = if (videoSrc.startsWith("//")) "https:$videoSrc" else videoSrc
-    return fixedUrl
+                IconButton(
+                    onClick = {
+                        selectedEpisode?.let { episode ->
+                            val shareText = "${episode.title} - ${context.resources.getString(R.string.episode_title, episode.episode)}\n${RetrofitModule.BASE_URL}${episode.id}"
+                            onShare(shareText)
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "分享",
+                        tint = Color.White,
+                        modifier = Modifier.size(CommonMargin.m4)
+                    )
+                }
+            }
+        }
+
+        if (isVideoBuffering) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        }
+    }
 }
 
 @Composable
-private fun EpisodeSection(state: UiState.Success<List<AnimeEpisodeBean>>?, selectedEpisode: MutableState<AnimeEpisodeBean?>) {
+private fun AnimeTitleSection(
+    episode: AnimeEpisodeBean?,
+    video: AnimeVideoBean?,
+    isFavorite: Boolean,
+    onDownload: (AnimeVideoBean, AnimeEpisodeBean) -> Unit,
+    onToggleFavorite: (AnimeEpisodeBean, Boolean) -> Unit
+) {
+    episode?.let {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = CommonMargin.m4,
+                    vertical = CommonMargin.m4
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CommonTextL(
+                text = "${it.title} - ${stringResource(R.string.episode_title, it.episode)}",
+                textAlign = TextAlign.Start,
+                bold = true,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(CommonMargin.m5))
+            IconButton(
+                onClick = {
+                    video?.let { v -> onDownload(v, it) }
+                },
+                modifier = Modifier.size(CommonMargin.m5)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.download),
+                    contentDescription = "緩存",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.width(CommonMargin.m5))
+            IconButton(
+                onClick = {
+                    onToggleFavorite(it, isFavorite)
+                },
+                modifier = Modifier.size(CommonMargin.m5)
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "收藏",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeSection(
+    episodes: List<AnimeEpisodeBean>,
+    selectedEpisode: AnimeEpisodeBean?,
+    onSelectEpisode: (AnimeEpisodeBean) -> Unit,
+) {
     FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(CommonMargin.m2)
     ) {
-        state?.data?.forEach { episode ->
-            val isSelected = episode == selectedEpisode.value
+        episodes.forEach { episode ->
+            val isSelected = remember(selectedEpisode) { episode == selectedEpisode }
             Button(
-                onClick = { selectedEpisode.value = episode },
+                onClick = { onSelectEpisode(episode) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isSelected)
                         MaterialTheme.colorScheme.primary
@@ -584,7 +603,6 @@ private fun ErrorText(message: String? = null) {
     }
 }
 
-
 @OptIn(UnstableApi::class)
 private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
     val window = activity.window
@@ -604,7 +622,7 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
 }
 
 @Composable
-fun CommentItem(comment: AnimeCommentBean, imageDialogUrl: MutableState<String?>) {
+fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
     val parts = splitMessageWithMedia(comment.message)
     Row(modifier = Modifier.fillMaxWidth()) {
         Avatar(url = comment.user.avatar.url)
@@ -629,7 +647,7 @@ fun CommentItem(comment: AnimeCommentBean, imageDialogUrl: MutableState<String?>
 
                     is MessagePart.ImagePlaceholder -> {
                         comment.media.getOrNull(part.mediaIndex)?.let {
-                            CommentImageResources(it, imageDialogUrl)
+                            CommentImageResources(it, onImageClick)
                         }
                     }
                 }
@@ -644,40 +662,21 @@ fun CommentItem(comment: AnimeCommentBean, imageDialogUrl: MutableState<String?>
 }
 
 @Composable
-private fun getImageRequest(url: String): ImageRequest {
-    return ImageRequest.Builder(LocalContext.current)
-        .data(url)
-        .crossfade(true)
-        .diskCachePolicy(CachePolicy.ENABLED)
-        .memoryCachePolicy(CachePolicy.ENABLED)
-        .apply {
-            if (url.endsWith(".gif")) {
-                decoderFactory(GifDecoder.Factory())
-            }
-        }.build()
-}
-
-@Composable
-private fun CommentImageResources(media: MediaBean, imageDialogUrl: MutableState<String?>) {
+private fun CommentImageResources(media: MediaBean, onImageClick: (String) -> Unit) {
     Spacer(modifier = Modifier.height(CommonMargin.m2))
-    val isImageLoaded = remember { mutableStateOf(false) }
+    val isLoaded = remember { mutableStateOf(false) }
+    val context = LocalContext.current
     SubcomposeAsyncImage(
-        model = getImageRequest(media.url),
+        model = getImageRequest(context, media.url),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .heightIn(max = 200.dp)
             .clip(RoundedCornerShape(CommonMargin.m2))
             .background(Color.LightGray)
-            .then(
-                if (isImageLoaded.value) {
-                    Modifier.clickable {
-                        imageDialogUrl.value = media.url
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+            .clickable(enabled = isLoaded.value) {
+                onImageClick(media.url)
+            },
         loading = {
             Box(
                 modifier = Modifier
@@ -689,10 +688,10 @@ private fun CommentImageResources(media: MediaBean, imageDialogUrl: MutableState
             }
         },
         onSuccess = {
-            isImageLoaded.value = true
+            isLoaded.value = true
         },
         error = {
-            isImageLoaded.value = false
+            isLoaded.value = false
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.5f)
@@ -730,9 +729,15 @@ private fun Avatar(url: String) {
 }
 
 @Composable
-private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel: IAnimeDownloadViewModel) {
+private fun ImageDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit,
+    onDownload: (String) -> Unit
+) {
+    val context = LocalContext.current
+
     Dialog(
-        onDismissRequest = { imageDialogUrl.value = null },
+        onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false
         )
@@ -744,7 +749,7 @@ private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel
         ) {
             // 圖片內容（置中）
             SubcomposeAsyncImage(
-                model = getImageRequest(imageDialogUrl.value ?: DefaultConst.EMPTY_STRING),
+                model = getImageRequest(context, imageUrl),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -761,7 +766,7 @@ private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel
                 IconButton(
                     modifier = Modifier.size(CommonMargin.m5),
                     onClick = {
-                        downloadViewModel.download(imageDialogUrl.value ?: DefaultConst.EMPTY_STRING)
+                        onDownload(imageUrl)
                     }
                 ) {
                     Icon(
@@ -773,9 +778,7 @@ private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel
                 Spacer(Modifier.size(CommonMargin.m3))
                 // 關閉按鈕
                 IconButton(
-                    onClick = {
-                        imageDialogUrl.value = null
-                    }
+                    onClick = onDismiss
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -786,28 +789,4 @@ private fun ImageDialog(imageDialogUrl: MutableState<String?>, downloadViewModel
             }
         }
     }
-}
-
-private fun splitMessageWithMedia(message: String): List<MessagePart> {
-    val imageUrlRegex = "(https?://[^\\s]+\\.(jpg|jpeg|png|gif))".toRegex(RegexOption.IGNORE_CASE)
-    val parts = mutableListOf<MessagePart>()
-    var lastIndex = 0
-    imageUrlRegex.findAll(message).forEachIndexed { index, match ->
-        val start = match.range.first
-        if (start > lastIndex) {
-            val text = message.substring(lastIndex, start)
-            parts.add(MessagePart.Text(text))
-        }
-        parts.add(MessagePart.ImagePlaceholder(index))
-        lastIndex = match.range.last + 1
-    }
-    if (lastIndex < message.length) {
-        parts.add(MessagePart.Text(message.substring(lastIndex)))
-    }
-    return parts
-}
-
-sealed class MessagePart {
-    data class Text(val text: String) : MessagePart()
-    data class ImagePlaceholder(val mediaIndex: Int) : MessagePart()
 }

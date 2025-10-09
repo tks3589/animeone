@@ -1,6 +1,4 @@
 import android.content.Intent
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,15 +32,16 @@ import com.aaron.chen.animeone.app.view.activity.AnimePlayerActivity
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarScreen(viewModel: IAnimeoneViewModel) {
+fun CalendarScreen() {
+    val viewModel = koinViewModel<AnimeoneViewModel>()
     val context = LocalContext.current
     val uiState = viewModel.timeLineState.collectAsStateWithLifecycle(UiState.Idle)
     val daysOfWeek = listOf("一", "二", "三", "四", "五", "六", "日")

@@ -1,7 +1,5 @@
 package com.aaron.chen.animeone.app.model.repository.api
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import com.aaron.chen.animeone.app.model.data.bean.AnimeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
@@ -38,7 +36,6 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun getAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean> {
         return apiModel.getAnimeSeason(requestTag, RetrofitModule.BASE_URL)
             .map { html -> HtmlUtils.toAnimeSeason(html) }
@@ -59,7 +56,8 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
     override fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean> {
         val url = RetrofitModule.VIDEO_API_URL
         val bodyString = "d=$dataRaw"
-        val requestBody = bodyString.toRequestBody("application/x-www-form-urlencoded".toMediaType())
+        val contentType = "application/x-www-form-urlencoded".toMediaType()
+        val requestBody = bodyString.toRequestBody(contentType)
         return apiModel.requestAnimeVideo(requestTag, url, requestBody).map { response ->
             val allCookies= response.headers().values("Set-Cookie")
             val filteredCookie = allCookies.mapNotNull { cookie ->
@@ -85,7 +83,6 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun requestComments(animeId: String): Flow<List<AnimeCommentBean>> {
         val url = RetrofitModule.COMMENTS_URL.toUri().buildUpon()
             .appendQueryParameter("thread", "link:${RetrofitModule.BASE_URL}$animeId")

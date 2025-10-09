@@ -1,7 +1,5 @@
 package com.aaron.chen.animeone.utils
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.responsevo.AnimeSeasonTimeLineRespVo
 import com.aaron.chen.animeone.constant.DefaultConst
@@ -12,8 +10,6 @@ object HtmlUtils {
         val document = Jsoup.parse(html)
         return document.getElementById("menu-item-16716")?.text()?.trim() ?: DefaultConst.EMPTY_STRING
     }
-
-    @RequiresApi(Build.VERSION_CODES.O)
     fun toAnimeEpisodeList(html: String): List<AnimeEpisodeBean> {
         val document = Jsoup.parse(html)
         val articles = document.getElementsByTag("article").reversed()

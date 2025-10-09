@@ -52,17 +52,18 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
 import com.aaron.chen.animeone.app.view.ui.widget.PullToRefresh
-import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
 import com.aaron.chen.animeone.database.entity.AnimeEntity
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun AnimeScreen(
-    navController: NavHostController,
-    viewModel: IAnimeoneViewModel
+    navController: NavHostController
 ) {
+    val viewModel = koinViewModel<AnimeoneViewModel>()
     val context = LocalContext.current
     val animeItems = viewModel.requestAnimeList().collectAsLazyPagingItems()
     var searchQuery by remember { mutableStateOf(DefaultConst.EMPTY_STRING) }

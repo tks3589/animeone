@@ -196,7 +196,6 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun loadDownloadedVideos() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
