@@ -12,6 +12,7 @@ import com.aaron.chen.animeone.app.model.repository.impl.IAnimeoneRepository
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.database.entity.AnimeEntity
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -30,6 +31,7 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
     override fun requestAnimeList(): Flow<PagingData<AnimeEntity>> {
         return animeRepository.requestAnimes().cachedIn(viewModelScope)
     }
+    private var commentJob: Job? = null
 
     override fun requestAnimeSeasonTimeLine() {
         viewModelScope.launch {
@@ -66,7 +68,8 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
     }
 
     override fun requestAnimeComments(animeId: String) {
-        viewModelScope.launch {
+        commentJob?.cancel()
+        commentJob = viewModelScope.launch {
             animeRepository.requestAnimeComments(animeId)
                 .onStart {
                     commentState.value = UiState.Loading
