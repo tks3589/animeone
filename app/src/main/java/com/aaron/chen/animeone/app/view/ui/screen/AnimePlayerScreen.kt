@@ -74,7 +74,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -94,12 +93,12 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextL
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
+import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeDownloadViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import com.aaron.chen.animeone.utils.MediaUtils.getImageRequest
-import com.aaron.chen.animeone.utils.MediaUtils.getMediaSource
 import com.aaron.chen.animeone.utils.MediaUtils.getVideoHeaders
 import com.aaron.chen.animeone.utils.MediaUtils.getVideoSrc
 import com.aaron.chen.animeone.utils.MediaUtils.splitMessageWithMedia
@@ -113,22 +112,22 @@ import org.koin.androidx.compose.koinViewModel
 @RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(UnstableApi::class)
 @Composable
-fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast: Boolean) {
-    val animeoneViewModel = koinViewModel<AnimeoneViewModel>()
-    val storageViewModel = koinViewModel<AnimeStorageViewModel>()
-    val episodeLoadState = animeoneViewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
-    val commentsLoadState = animeoneViewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
-    val favoriteBookState = storageViewModel.bookState.collectAsStateWithLifecycle(UiState.Idle)
+fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, episode: Int, playLast: Boolean) {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val selectedEpisode = remember { mutableStateOf<AnimeEpisodeBean?>(null) }
-    val isFullscreen = remember { mutableStateOf(false) }
-    val isVideoBuffering = remember { mutableStateOf(true) }
-    val imageDialogUrl = remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
+    val animeoneViewModel = koinViewModel<AnimeoneViewModel>()
+    val storageViewModel = koinViewModel<AnimeStorageViewModel>()
     val downloadViewModel = koinViewModel<AnimeDownloadViewModel>()
-    val currentVideo = remember { mutableStateOf<AnimeVideoBean?>(null) }
+    val episodeLoadState = animeoneViewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
+    val commentsLoadState = animeoneViewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
+    val favoriteBookState = storageViewModel.bookState.collectAsStateWithLifecycle(UiState.Idle)
+    val selectedEpisodeState = playerViewModel.selectedEpisode.collectAsStateWithLifecycle()
+    val currentVideoState = playerViewModel.currentVideo.collectAsStateWithLifecycle()
+    val isVideoBufferingState = playerViewModel.isVideoBuffering.collectAsStateWithLifecycle()
+    val isFullscreen = remember { mutableStateOf(false) }
+    val imageDialogUrl = remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         activity?.window?.let {
@@ -140,29 +139,6 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
         storageViewModel.requestBookState(animeId)
     }
 
-    DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                isVideoBuffering.value = playbackState == Player.STATE_BUFFERING
-                if (playbackState == Player.STATE_ENDED) {
-                    val episodes = (episodeLoadState.value as? UiState.Success)?.data.orEmpty()
-                    val current = selectedEpisode.value
-                    val currentIndex = episodes.indexOfFirst { it.id == current?.id }
-
-                    if (currentIndex != -1 && currentIndex < episodes.lastIndex) {
-                        selectedEpisode.value = episodes[currentIndex + 1]
-                    } else {
-                        selectedEpisode.value = episodes.first()
-                    }
-                }
-            }
-        }
-        player.addListener(listener)
-        onDispose {
-            player.removeListener(listener)
-        }
-    }
-
     DisposableEffect(activity) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
@@ -172,7 +148,6 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
 
     DisposableEffect(lifecycleOwner) {
         onDispose {
-            player.release()
             if (isFullscreen.value && activity != null) {
                 toggleFullscreen(activity, false)
             }
@@ -188,36 +163,28 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
     LaunchedEffect(episodeLoadState.value) {
         val state = episodeLoadState.value
         if (state is UiState.Success && state.data.isNotEmpty()) {
-            val targetEpisode = if (playLast) {
-                state.data.lastOrNull() ?: state.data.last()
-            } else {
-                state.data.firstOrNull { it.episode == episode } ?: state.data.first()
-            }
-            selectedEpisode.value = targetEpisode
+            playerViewModel.updateEpisodeData(data = state.data, episode = episode, playLast = playLast)
         }
     }
 
     LaunchedEffect(imageDialogUrl.value) {
         if (imageDialogUrl.value != null) {
-            player.pause()
+            playerViewModel.pause()
         }
     }
 
-    LaunchedEffect(selectedEpisode.value) {
-        val episodeBean = selectedEpisode.value
-        isVideoBuffering.value = true
+    LaunchedEffect(selectedEpisodeState.value) {
+        val episodeBean = selectedEpisodeState.value
+        playerViewModel.isVideoBuffering.value = true
         episodeBean?.let {
             launch {
                 animeoneViewModel.requestAnimeVideo(it.dataApireq)
                     .catch { error ->
                         Toast.makeText(context, "${context.resources.getString(R.string.error_text)}：${error.message}", Toast.LENGTH_SHORT).show()
-                        isVideoBuffering.value = false
+                        playerViewModel.isVideoBuffering.value = false
                     }
                     .collect { video ->
-                        currentVideo.value = video
-                        player.setMediaSource(getMediaSource(video))
-                        player.prepare()
-                        player.play()
+                        playerViewModel.play(video)
 
                         val session = Clock.System.now().toEpochMilliseconds()
                         val title = "${it.title} ${context.resources.getString(R.string.episode_title, it.episode)}"
@@ -247,9 +214,9 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
             .padding(if (isFullscreen.value) PaddingValues(0.dp) else WindowInsets.statusBars.asPaddingValues())
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (selectedEpisode.value != null) {
+        if (selectedEpisodeState.value != null) {
             PlayerSection(
-                player = player,
+                player = playerViewModel.getPlayer(),
                 isFullscreen = isFullscreen.value,
                 onToggleFullscreen = { isFullscreen.value = !isFullscreen.value },
                 onExit = {
@@ -259,7 +226,7 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
                         isFullscreen.value = false
                     }
                 },
-                selectedEpisode = selectedEpisode.value,
+                selectedEpisode = selectedEpisodeState.value,
                 onShare = { shareText ->
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -267,7 +234,7 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
                     }
                     context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_to)))
                 },
-                isVideoBuffering = isVideoBuffering.value
+                isVideoBuffering = isVideoBufferingState.value
             )
             if (!isFullscreen.value) {
                 LazyColumn(
@@ -278,8 +245,8 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
                 ) {
                     item {
                         AnimeTitleSection(
-                            episode = selectedEpisode.value,
-                            video = currentVideo.value,
+                            episode = selectedEpisodeState.value,
+                            video = currentVideoState.value,
                             isFavorite = (favoriteBookState.value as? UiState.Success)?.data ?: false,
                             onDownload = { video, episode ->
                                 downloadViewModel.download(
@@ -289,7 +256,7 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
                                 )
                             },
                             onToggleFavorite = { episode, isFavorite ->
-                                scope.launch {
+                                coroutineScope.launch {
                                     if (isFavorite) {
                                         storageViewModel.unbookAnime(animeId)
                                         Toast.makeText(context, context.getString(R.string.favorite_remove), Toast.LENGTH_SHORT).show()
@@ -309,15 +276,15 @@ fun AnimePlayerScreen(player: ExoPlayer, animeId: String, episode: Int, playLast
                         )
                     }
                     item {
-                        selectedEpisode.value?.let { episode ->
+                        selectedEpisodeState.value?.let { episode ->
                             CommonTextXS(text = stringResource(R.string.update_time, episode.updateTime), modifier = Modifier.padding(start = CommonMargin.m4))
                         }
                     }
                     item {
                         EpisodeSection(
                             episodes = (episodeLoadState.value as? UiState.Success)?.data.orEmpty(),
-                            selectedEpisode = selectedEpisode.value,
-                            onSelectEpisode = { selectedEpisode.value = it }
+                            selectedEpisode = selectedEpisodeState.value,
+                            onSelectEpisode = { playerViewModel.selectedEpisode.value = it }
                         )
                     }
                     // Comment 區塊標題
