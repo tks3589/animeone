@@ -94,18 +94,19 @@ import kotlinx.datetime.Clock
 fun PlayerScreenContent(
     activity: Activity,
     animeId: String,
-    isFullscreen: MutableState<Boolean>,
-    selectedEpisodeState: State<AnimeEpisodeBean?>,
-    isVideoBufferingState: State<Boolean>,
-    currentVideoState: State<AnimeVideoBean?>,
-    favoriteBookState: State<UiState<Boolean>>,
-    episodeLoadState: State<UiState<List<AnimeEpisodeBean>>>,
-    commentsLoadState: State<UiState<List<AnimeCommentBean>>>,
-    imageDialogUrl: MutableState<String?>,
+    playerSourceState: PlayerSourceState,
     playerViewModel: IAnimePlayerViewModel,
     storageViewModel: IAnimeStorageViewModel,
     downloadViewModel: IAnimeDownloadViewModel
 ) {
+    val isFullscreen = playerSourceState.isFullscreen
+    val selectedEpisodeState = playerSourceState.selectedEpisodeState
+    val isVideoBufferingState = playerSourceState.isVideoBufferingState
+    val currentVideoState = playerSourceState.currentVideoState
+    val favoriteBookState = playerSourceState.favoriteBookState
+    val episodeLoadState = playerSourceState.episodeLoadState
+    val commentsLoadState = playerSourceState.commentsLoadState
+    val imageDialogUrl = playerSourceState.imageDialogUrl
     val actionHandler = remember(activity) { PlayerActionHandler(activity, storageViewModel, downloadViewModel) }
     PlayerSection(
         player = playerViewModel.getPlayer(),

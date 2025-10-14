@@ -20,6 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -32,7 +35,10 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aaron.chen.animeone.R
+import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeRecordBean
+import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.model.state.UiState
 import com.aaron.chen.animeone.app.view.ui.widget.ErrorText
 import com.aaron.chen.animeone.app.view.ui.widget.ImageDialog
@@ -55,14 +61,31 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
     val animeoneViewModel = koinViewModel<AnimeoneViewModel>()
     val storageViewModel = koinViewModel<AnimeStorageViewModel>()
     val downloadViewModel = koinViewModel<AnimeDownloadViewModel>()
-    val episodeLoadState = animeoneViewModel.episodeState.collectAsStateWithLifecycle(UiState.Idle)
-    val commentsLoadState = animeoneViewModel.commentState.collectAsStateWithLifecycle(UiState.Idle)
-    val favoriteBookState = storageViewModel.bookState.collectAsStateWithLifecycle(UiState.Idle)
-    val selectedEpisodeState = playerViewModel.selectedEpisode.collectAsStateWithLifecycle()
-    val currentVideoState = playerViewModel.currentVideo.collectAsStateWithLifecycle()
-    val isVideoBufferingState = playerViewModel.isVideoBuffering.collectAsStateWithLifecycle()
-    val isFullscreen = remember { mutableStateOf(false) }
-    val imageDialogUrl = remember { mutableStateOf<String?>(null) }
+    val playerSourceState = run {
+        val episodeLoadState = animeoneViewModel.episodeState.collectAsStateWithLifecycle()
+        val commentsLoadState = animeoneViewModel.commentState.collectAsStateWithLifecycle()
+        val favoriteBookState = storageViewModel.bookState.collectAsStateWithLifecycle()
+        val selectedEpisodeState = playerViewModel.selectedEpisode.collectAsStateWithLifecycle()
+        val currentVideoState = playerViewModel.currentVideo.collectAsStateWithLifecycle()
+        val isVideoBufferingState = playerViewModel.isVideoBuffering.collectAsStateWithLifecycle()
+        val isFullscreen = remember { mutableStateOf(false) }
+        val imageDialogUrl = remember { mutableStateOf<String?>(null) }
+
+        PlayerSourceState(
+            episodeLoadState,
+            commentsLoadState,
+            favoriteBookState,
+            selectedEpisodeState,
+            currentVideoState,
+            isVideoBufferingState,
+            isFullscreen,
+            imageDialogUrl
+        )
+    }
+    val isFullscreen = playerSourceState.isFullscreen
+    val selectedEpisodeState = playerSourceState.selectedEpisodeState
+    val episodeLoadState = playerSourceState.episodeLoadState
+    val imageDialogUrl = playerSourceState.imageDialogUrl
 
     LaunchedEffect(Unit) {
         activity?.window?.let {
@@ -154,14 +177,7 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
                 PlayerScreenContent(
                     activity = it,
                     animeId = animeId,
-                    isFullscreen = isFullscreen,
-                    selectedEpisodeState = selectedEpisodeState,
-                    isVideoBufferingState = isVideoBufferingState,
-                    currentVideoState = currentVideoState,
-                    favoriteBookState = favoriteBookState,
-                    episodeLoadState = episodeLoadState,
-                    commentsLoadState = commentsLoadState,
-                    imageDialogUrl = imageDialogUrl,
+                    playerSourceState = playerSourceState,
                     playerViewModel = playerViewModel,
                     storageViewModel = storageViewModel,
                     downloadViewModel = downloadViewModel
@@ -172,7 +188,7 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
         } else if (episodeLoadState.value is UiState.Empty) {
             ErrorText(stringResource(R.string.episode_empty))
         } else {
-           LoadingText()
+            LoadingText()
         }
     }
 
@@ -204,3 +220,15 @@ private fun toggleFullscreen(activity: Activity, isFullscreen: Boolean) {
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 }
+
+@Stable
+data class PlayerSourceState(
+    val episodeLoadState: State<UiState<List<AnimeEpisodeBean>>>,
+    val commentsLoadState: State<UiState<List<AnimeCommentBean>>>,
+    val favoriteBookState: State<UiState<Boolean>>,
+    val selectedEpisodeState: State<AnimeEpisodeBean?>,
+    val currentVideoState: State<AnimeVideoBean?>,
+    val isVideoBufferingState: State<Boolean>,
+    val isFullscreen: MutableState<Boolean>,
+    val imageDialogUrl: MutableState<String?>
+)
