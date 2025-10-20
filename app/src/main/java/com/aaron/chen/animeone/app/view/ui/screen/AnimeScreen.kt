@@ -179,7 +179,6 @@ fun AnimeItem(anime: AnimeEntity, onClick: () -> Unit) {
             ) {
                 CommonTextM(
                     text = anime.title,
-                    maxLines = 2,
                     textAlign = TextAlign.Start
                 )
 
