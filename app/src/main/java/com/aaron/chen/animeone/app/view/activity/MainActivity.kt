@@ -45,7 +45,9 @@ class MainActivity : ComponentActivity() {
                 if (!hasNotificationPermission()) {
                     showPermissionDialogState.value = DialogType.PERMISSION_NOTIFICATION
                 } else if (!hasReadMediaPermission()) {
-                    showPermissionDialogState.value = DialogType.PERMISSION_VIDEO_STORAGE
+                    showPermissionDialogState.value = DialogType.PERMISSION_VIDEO_READ
+                } else if (!hasWriteMediaPermission()) {
+                    showPermissionDialogState.value = DialogType.PERMISSION_VIDEO_WRITE
                 }
             } else {
                 requestPermissions()
@@ -71,7 +73,8 @@ class MainActivity : ComponentActivity() {
         showPermissionDialogState.value?.let { dialogType ->
             val permissionGranted = when (dialogType) {
                 DialogType.PERMISSION_NOTIFICATION -> hasNotificationPermission()
-                DialogType.PERMISSION_VIDEO_STORAGE -> hasReadMediaPermission()
+                DialogType.PERMISSION_VIDEO_READ -> hasReadMediaPermission()
+                DialogType.PERMISSION_VIDEO_WRITE -> hasWriteMediaPermission()
             }
             if (permissionGranted) {
                 showPermissionDialogState.value = null
@@ -81,7 +84,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun hasNotificationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
     }
 
     private fun hasReadMediaPermission(): Boolean {
@@ -92,16 +99,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun hasWriteMediaPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
     private fun requestPermissions() {
         // 請求權限
         if (!hasNotificationPermission()) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         } else if (!hasReadMediaPermission()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 requestPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
+        } else if (!hasWriteMediaPermission()) {
+            requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
     }
 }

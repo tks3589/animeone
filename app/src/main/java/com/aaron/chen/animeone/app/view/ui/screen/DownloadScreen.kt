@@ -88,18 +88,20 @@ fun DownloadScreen() {
                 text = stringResource(R.string.download_manager)
             )
 
-            Text(
-                text = if (isEditing.value) "完成" else "編輯",
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clickable {
-                        if (isEditing.value) {
-                            selectedItems.value = emptySet()
+            if (loadVideoState.value is UiState.Success && (loadVideoState.value as UiState.Success<List<AnimeDownloadBean>>).data.isNotEmpty()) {
+                Text(
+                    text = if (isEditing.value) "完成" else "編輯",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 16.sp,
+                    modifier = Modifier
+                        .clickable {
+                            if (isEditing.value) {
+                                selectedItems.value = emptySet()
+                            }
+                            isEditing.value = !isEditing.value
                         }
-                        isEditing.value = !isEditing.value
-                    }
-            )
+                )
+            }
         }
 
         when (val state = loadVideoState.value) {
@@ -117,7 +119,7 @@ fun DownloadScreen() {
             is UiState.Error -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CommonTextS(
-                        text = stringResource(R.string.error_text),
+                        text = "${stringResource(R.string.error_text)} : ${state.message}",
                         color = MaterialTheme.colorScheme.error
                     )
                 }
