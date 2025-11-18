@@ -70,8 +70,12 @@ enum class DialogType(
         R.string.permission_notification_title,
         R.string.permission_notification_message
     ),
-    PERMISSION_VIDEO_STORAGE(
-        R.string.permission_video_storage_title,
-        R.string.permission_video_storage_message
+    PERMISSION_VIDEO_READ(
+        R.string.permission_video_read_title,
+        R.string.permission_video_read_message
+    ),
+    PERMISSION_VIDEO_WRITE(
+        R.string.permission_video_write_title,
+        R.string.permission_video_write_message
     )
 }

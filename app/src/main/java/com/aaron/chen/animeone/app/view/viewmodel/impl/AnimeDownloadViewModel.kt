@@ -1,5 +1,6 @@
 package com.aaron.chen.animeone.app.view.viewmodel.impl
 
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,11 +11,12 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -32,84 +34,50 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 
 @KoinViewModel
-class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadViewModel, KoinComponent {
+class AnimeDownloadViewModel: ViewModel(), IAnimeDownloadViewModel, KoinComponent {
+    private val context: Context by inject()
     private val ketch: Ketch by lazy {
         Ketch.builder().build(context)
     }
     override val loadVideoState: MutableStateFlow<UiState<List<AnimeDownloadBean>>> = MutableStateFlow(UiState.Idle)
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    override fun download(url: String, headers: HashMap<String, String>, episodeBean: AnimeEpisodeBean?) {
+    override fun download(
+        url: String,
+        headers: HashMap<String, String>,
+        episodeBean: AnimeEpisodeBean?
+    ) {
+        val resolver = context.contentResolver
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
         var defaultFileName = url.substringAfterLast("/")
         val fileName = buildString {
             if (episodeBean != null) {
                 append("${VideoConst.ANIME_TAG}_${episodeBean.id}_${episodeBean.title}_${episodeBean.episode}.mp4")
                 defaultFileName = "${episodeBean.title}_${episodeBean.episode}.mp4"
-            } else {
-                append(defaultFileName)
-            }
+            } else append(defaultFileName)
         }
+
         val lowerName = fileName.lowercase()
-        val appPath = "/MxAnime"
-
-        Toast.makeText(context, "開始下載", Toast.LENGTH_SHORT).show()
-
-        // ✅ 自動建立通知 Channel
-        createDownloadChannelIfNeeded()
-
-        // ✅ 根據副檔名判斷檔案型別
-        val isImage = listOf(".jpg", ".jpeg", ".png", ".webp", ".gif").any { lowerName.endsWith(it) }
-        val isVideo = listOf(".mp4", ".mov", ".mkv").any { lowerName.endsWith(it) }
-
-       // ✅ 正確 MIME type（避免 image/jpg 錯誤，也支援 GIF）
+        val appSubDir = "MxAnime"
         val mimeType = when {
             lowerName.endsWith(".png") -> "image/png"
+            lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") -> "image/jpeg"
             lowerName.endsWith(".webp") -> "image/webp"
             lowerName.endsWith(".gif") -> "image/gif"
-            lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") -> "image/jpeg"
-            lowerName.endsWith(".mp4") -> "video/mp4"
             lowerName.endsWith(".mov") -> "video/quicktime"
             lowerName.endsWith(".mkv") -> "video/x-matroska"
-            else -> if (isImage) "image/jpeg" else "video/mp4"
+            else -> "video/mp4"
         }
 
-        val relativePath = "${Environment.DIRECTORY_DOWNLOADS}$appPath"
-        val collectionUri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        Toast.makeText(context, "開始下載", Toast.LENGTH_SHORT).show()
+        createDownloadChannelIfNeeded()
 
-        // 1️⃣ 建立 MediaStore 預留項
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-            put(MediaStore.MediaColumns.IS_PENDING, 1)
-        }
-
-        val resolver = context.contentResolver
-        val uri = resolver.insert(collectionUri, contentValues)
-
-        if (uri == null) {
-            Toast.makeText(context, "下載失敗", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // 2️⃣ 暫存資料夾
-        val tempDir = File(context.cacheDir, "downloads").apply { if (!exists()) mkdirs() }
-
-        // 3️⃣ 開始下載
-        val downloadId = ketch.download(
-            url = url,
-            fileName = fileName,
-            path = tempDir.absolutePath,
-            headers = headers
-        )
-
-        // 🔔 建立通知
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // 建立通知
         val notificationId = fileName.hashCode()
-
         val builder = NotificationCompat.Builder(context, "download_channel")
             .setContentTitle("下載中...")
             .setContentText(defaultFileName)
@@ -120,7 +88,16 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
 
         notificationManager.notify(notificationId, builder.build())
 
-        // 4️⃣ 監聽進度與完成狀態
+        // 建立暫存資料夾
+        val tempDir = File(context.cacheDir, "downloads").apply { if (!exists()) mkdirs() }
+
+        val downloadId = ketch.download(
+            url = url,
+            fileName = fileName,
+            path = tempDir.absolutePath,
+            headers = headers
+        )
+
         viewModelScope.launch {
             ketch.observeDownloadById(downloadId)
                 .flowOn(Dispatchers.IO)
@@ -129,70 +106,155 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
                     builder.setProgress(100, progress, false)
                     notificationManager.notify(notificationId, builder.build())
 
-                    if (model?.status?.name?.contains(Status.SUCCESS.name, ignoreCase = true) == true) {
-                        val downloadedFile = File(tempDir, fileName)
-                        if (downloadedFile.exists()) {
-                            resolver.openOutputStream(uri)?.use { output ->
-                                downloadedFile.inputStream().use { input ->
-                                    input.copyTo(output)
+                    when (model?.status) {
+                        Status.SUCCESS -> {
+                            val downloadedFile = File(tempDir, fileName)
+                            if (!downloadedFile.exists()) return@collect
+
+                            // ✅ 根據版本寫入目標位置
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                val relativePath =
+                                    "${Environment.DIRECTORY_DOWNLOADS}/$appSubDir"
+                                val collectionUri =
+                                    MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                                val contentValues = ContentValues().apply {
+                                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                                    put(MediaStore.MediaColumns.IS_PENDING, 1)
                                 }
+
+                                val uri = resolver.insert(collectionUri, contentValues)
+                                uri?.let {
+                                    resolver.openOutputStream(it)?.use { output ->
+                                        downloadedFile.inputStream().use { input ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+
+                                    // 解鎖檔案
+                                    resolver.update(
+                                        it,
+                                        ContentValues().apply {
+                                            put(MediaStore.MediaColumns.IS_PENDING, 0)
+                                        },
+                                        null,
+                                        null
+                                    )
+
+                                    // 點擊通知可開啟影片
+                                    val openIntent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(it, mimeType)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    val pendingIntent = PendingIntent.getActivity(
+                                        context,
+                                        0,
+                                        openIntent,
+                                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                                    )
+
+                                    builder.setContentTitle("下載完成")
+                                        .setContentText(defaultFileName)
+                                        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                                        .setProgress(0, 0, false)
+                                        .setContentIntent(pendingIntent)
+                                        .setAutoCancel(true)
+                                    notificationManager.notify(notificationId, builder.build())
+                                }
+                            } else {
+                                // ✅ Android 8–9：用實體檔案寫入
+                                val downloadsDir =
+                                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                val legacyDir = File(downloadsDir, appSubDir).apply { if (!exists()) mkdirs() }
+                                val outFile = File(legacyDir, fileName)
+
+                                // 有重複檔案就刪掉
+                                if (outFile.exists()) outFile.delete()
+
+                                downloadedFile.copyTo(outFile, overwrite = true)
+
+                                // 通知媒體掃描
+                                MediaScannerConnection.scanFile(
+                                    context,
+                                    arrayOf(outFile.absolutePath),
+                                    arrayOf(mimeType),
+                                    null
+                                )
+
+                                val openIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.fromFile(outFile), mimeType)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                val pendingIntent = PendingIntent.getActivity(
+                                    context,
+                                    0,
+                                    openIntent,
+                                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                                )
+
+                                builder.setContentTitle("下載完成")
+                                    .setContentText(defaultFileName)
+                                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                                    .setProgress(0, 0, false)
+                                    .setContentIntent(pendingIntent)
+                                    .setAutoCancel(true)
+                                notificationManager.notify(notificationId, builder.build())
                             }
+                        }
 
-                            // ✅ 解鎖檔案
-                            val updateValues = ContentValues().apply {
-                                put(MediaStore.MediaColumns.IS_PENDING, 0)
-                            }
-                            resolver.update(uri, updateValues, null, null)
-
-                            // ✅ 通知系統掃描
-                            MediaScannerConnection.scanFile(
-                                context,
-                                arrayOf("${Environment.getExternalStorageDirectory()}/$relativePath/$fileName"),
-                                arrayOf(mimeType),
-                                null
-                            )
-
-                            // 📍 新增：點通知可開啟檔案
-                            val openIntent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, mimeType)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            val pendingIntent = PendingIntent.getActivity(
-                                context,
-                                0,
-                                openIntent,
-                                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                            )
-
-                            // ✅ 完成通知
-                            builder.setContentTitle("下載完成")
-                                .setContentText(defaultFileName)
-                                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                        Status.FAILED -> {
+                            builder.setContentTitle("下載失敗")
+                                .setContentText(fileName)
+                                .setSmallIcon(android.R.drawable.stat_notify_error)
                                 .setProgress(0, 0, false)
-                                .setContentIntent(pendingIntent) // 📌 ← 點擊可直接開啟
-                                .setAutoCancel(true) // 點一下自動關閉通知
                             notificationManager.notify(notificationId, builder.build())
                         }
-                    }
 
-                    if (model?.status?.name?.contains(Status.FAILED.name, ignoreCase = true) == true) {
-                        builder.setContentTitle("下載失敗")
-                            .setContentText(fileName)
-                            .setSmallIcon(android.R.drawable.stat_notify_error)
-                            .setProgress(0, 0, false)
-                        notificationManager.notify(notificationId, builder.build())
+                        else -> Unit
                     }
                 }
         }
     }
 
-    fun deleteVideo(context: Context, path: String): Boolean {
-        return try {
-            val rowsDeleted = context.contentResolver.delete(path.toUri(), null, null)
-            rowsDeleted > 0
+    fun deleteVideo(context: Context, path: String) {
+        try {
+            val uri = path.toUri()
+            val resolver = context.contentResolver
+            resolver.delete(uri, null, null)
+        } catch (e: SecurityException) {
+            Log.e("aaron_tt", "deleteVideo SecurityException: ${e.message}")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val uri = path.toUri()
+                val resolver = context.contentResolver
+                val intentSender = MediaStore.createDeleteRequest(resolver, listOf(uri)).intentSender
+                (context as? Activity)?.startIntentSenderForResult(
+                    intentSender,
+                    2001,
+                    null,
+                    0,
+                    0,
+                    0
+                )
+            } else {
+                val file = File(path)
+                if (file.exists()) {
+                    val deleted = file.delete()
+                    if (deleted) {
+                        // 通知媒體庫更新
+                        MediaScannerConnection.scanFile(
+                            context,
+                            arrayOf(file.absolutePath),
+                            null,
+                            null
+                        )
+                    }
+                } else {
+                    Log.e("aaron_tt", "deleteVideo file not exists : $path")
+                }
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
-            false
+            Log.e("aaron_tt", "deleteVideo Exception: ${e.message}")
         }
     }
 
@@ -206,8 +268,19 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
                     MediaStore.Video.Media.DATE_MODIFIED
                 )
 
-                val selection = "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ? AND ${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?"
-                val selectionArgs = arrayOf("%Download/MxAnime%", "${VideoConst.ANIME_TAG}%.mp4")
+                val (selection, selectionArgs) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // ✅ Android 10+ 用 RELATIVE_PATH
+                    Pair(
+                        "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ? AND ${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?",
+                        arrayOf("%Download/MxAnime%", "${VideoConst.ANIME_TAG}%.mp4")
+                    )
+                } else {
+                    // ✅ Android 9 以下用 DATA（完整檔案路徑）
+                    Pair(
+                        "${MediaStore.Video.Media.DATA} LIKE ? AND ${MediaStore.Video.Media.DISPLAY_NAME} LIKE ?",
+                        arrayOf("%/Download/MxAnime/%", "${VideoConst.ANIME_TAG}%.mp4")
+                    )
+                }
 
                 val sortOrder = "${MediaStore.Video.Media.DATE_MODIFIED} DESC"
 
@@ -287,19 +360,17 @@ class AnimeDownloadViewModel(val context: Context): ViewModel(), IAnimeDownloadV
      * ✅ 自動建立通知 Channel（只會建立一次）
      */
     private fun createDownloadChannelIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "download_channel"
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(channelId) == null) {
-                val channel = NotificationChannel(
-                    channelId,
-                    "下載進度",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply {
-                    description = "顯示下載進度與狀態"
-                }
-                manager.createNotificationChannel(channel)
+        val channelId = "download_channel"
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel(channelId) == null) {
+            val channel = NotificationChannel(
+                channelId,
+                "下載進度",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "顯示下載進度與狀態"
             }
+            manager.createNotificationChannel(channel)
         }
     }
 

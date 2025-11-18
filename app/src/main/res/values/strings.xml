@@ -23,7 +23,9 @@
     <string name="go_to_settings">前往設定</string>
     <string name="permission_notification_title">請啟用推播權限</string>
     <string name="permission_notification_message">若未授權啟用，將無法接收到推播。</string>
-    <string name="permission_video_storage_title">請“全部允許”啟用讀取影片權限</string>
-    <string name="permission_video_storage_message">若未授權啟用，將無法讀取下載影片。</string>
+    <string name="permission_video_read_title">請“全部允許”啟用讀取影片權限</string>
+    <string name="permission_video_read_message">若未授權啟用，將無法讀取下載影片。</string>
+    <string name="permission_video_write_title">請“全部允許”啟用寫入影片權限</string>
+    <string name="permission_video_write_message">若未授權啟用，將無法寫入下載影片。</string>
     <string name="download_video_empty">沒有下載影片\n請檢查是否尚未“全部允許”讀取影片權限</string>
 </resources>
