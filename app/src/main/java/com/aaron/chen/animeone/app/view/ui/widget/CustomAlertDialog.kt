@@ -25,7 +25,7 @@ fun CustomAlertDialog(
 ) {
     val context = LocalContext.current
 
-    Dialog(onDismissRequest = { onDismiss() }) {
+    Dialog(onDismissRequest = {}) {
         Card(
             modifier = Modifier
                 .wrapContentHeight(),
@@ -53,10 +53,18 @@ fun CustomAlertDialog(
 
                 // 確認按鈕
                 CustomButton(
-                    text = context.getString(R.string.go_to_settings),
+                    text = if (type == DialogType.REVIEW_INVITE) { context.getString(R.string.review_invite_confirm) } else { context.getString(R.string.go_to_settings) },
                     modifier = Modifier.padding(vertical = 15.dp),
                     onClick = onConfirm
                 )
+
+                if (type == DialogType.REVIEW_INVITE) {
+                    CustomButton(
+                        text = context.getString(R.string.review_invite_dismiss),
+                        modifier = Modifier.padding(vertical = 15.dp),
+                        onClick = onDismiss
+                    )
+                }
             }
         }
     }
@@ -77,5 +85,9 @@ enum class DialogType(
     PERMISSION_VIDEO_WRITE(
         R.string.permission_video_write_title,
         R.string.permission_video_write_message
+    ),
+    REVIEW_INVITE(
+        R.string.review_invite_title,
+        R.string.review_invite_message
     )
 }

@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -36,9 +38,13 @@ import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CustomAlertDialog
 import com.aaron.chen.animeone.app.view.ui.widget.DialogType
 import com.aaron.chen.animeone.constant.ExtraConst
+import com.aaron.chen.animeone.extension.launchInAppReview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val showPermissionDialogState: MutableState<DialogType?> = mutableStateOf(null)
+    private val showReviewInviteDialogState: MutableState<Boolean> = mutableStateOf(false)
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (!granted) {
@@ -62,8 +68,13 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
         setContent {
             AnimeoneTheme {
-                BottomNavApp(showPermissionDialogState)
+                BottomNavApp(showPermissionDialogState, showReviewInviteDialogState)
             }
+        }
+        lifecycleScope.launch {
+            // 讀review state from datastore
+            delay(3000)
+            showReviewInviteDialogState.value = true
         }
     }
 
@@ -75,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 DialogType.PERMISSION_NOTIFICATION -> hasNotificationPermission()
                 DialogType.PERMISSION_VIDEO_READ -> hasReadMediaPermission()
                 DialogType.PERMISSION_VIDEO_WRITE -> hasWriteMediaPermission()
+                else -> false
             }
             if (permissionGranted) {
                 showPermissionDialogState.value = null
@@ -126,7 +138,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>) {
+fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>, showReviewInviteDialogState: MutableState<Boolean>) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -162,6 +174,22 @@ fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>) {
     ) { innerPadding ->
         AnimeNavHost(innerPadding, navController)
         PermissionDialogDisplay(showPermissionDialogState)
+        ReviewInviteDialogDisplay(showReviewInviteDialogState)
+    }
+}
+
+@Composable
+private fun ReviewInviteDialogDisplay(showReviewInviteDialogState: MutableState<Boolean>) {
+    val activity = LocalActivity.current
+    if (showReviewInviteDialogState.value) {
+        CustomAlertDialog(
+            type = DialogType.REVIEW_INVITE,
+            onConfirm = {
+                activity?.launchInAppReview()
+                showReviewInviteDialogState.value = false
+            },
+            onDismiss = { showReviewInviteDialogState.value = false }
+        )
     }
 }
 

@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.androidx.ui)
     implementation(libs.accompanist.placeholder)
+    implementation(libs.google.play.review)
     implementation(libs.ketch)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

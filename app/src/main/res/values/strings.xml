@@ -23,6 +23,10 @@
     <string name="go_to_settings">前往設定</string>
     <string name="permission_notification_title">請啟用推播權限</string>
     <string name="permission_notification_message">若未授權啟用，將無法接收到推播。</string>
+    <string name="review_invite_title">喜歡這個 App 嗎？</string>
+    <string name="review_invite_confirm">好啊</string>
+    <string name="review_invite_dismiss">下次一定</string>
+    <string name="review_invite_message">評星並留下您寶貴的想法，讓這個App越來越好！</string>
     <string name="permission_video_read_title">請“全部允許”啟用讀取影片權限</string>
     <string name="permission_video_read_message">若未授權啟用，將無法讀取下載影片。</string>
     <string name="permission_video_write_title">請“全部允許”啟用寫入影片權限</string>
