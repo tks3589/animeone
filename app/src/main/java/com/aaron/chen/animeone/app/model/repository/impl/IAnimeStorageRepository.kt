@@ -11,4 +11,9 @@ interface IAnimeStorageRepository {
     suspend fun addRecordAnime(anime: AnimeRecordBean)
     suspend fun bookAnime(anime: AnimeFavoriteBean)
     suspend fun unbookAnime(animeId: String)
+    suspend fun increaseAnimeListClick()
+    suspend fun resetAnimeListClick()
+    suspend fun recordFirstLaunchDate()
+    suspend fun markReviewFirstTriggered(trigger: Boolean)
+    suspend fun shouldTryReview(): Boolean
 }

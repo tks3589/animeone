@@ -37,10 +37,13 @@ import com.aaron.chen.animeone.app.view.ui.theme.AnimeoneTheme
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
 import com.aaron.chen.animeone.app.view.ui.widget.CustomAlertDialog
 import com.aaron.chen.animeone.app.view.ui.widget.DialogType
+import com.aaron.chen.animeone.app.view.viewmodel.IAnimeStorageViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
 import com.aaron.chen.animeone.constant.ExtraConst
 import com.aaron.chen.animeone.extension.launchInAppReview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
     private val showPermissionDialogState: MutableState<DialogType?> = mutableStateOf(null)
@@ -59,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 requestPermissions()
             }
         }
+    private val storageViewModel: IAnimeStorageViewModel by viewModel<AnimeStorageViewModel>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -68,13 +72,16 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
         setContent {
             AnimeoneTheme {
-                BottomNavApp(showPermissionDialogState, showReviewInviteDialogState)
+                BottomNavApp(showPermissionDialogState, showReviewInviteDialogState, storageViewModel)
             }
         }
         lifecycleScope.launch {
-            // 讀review state from datastore
-            delay(3000)
-            showReviewInviteDialogState.value = true
+            storageViewModel.recordFirstLaunchDate()
+            if (storageViewModel.shouldTryReview()) {
+                storageViewModel.markReviewFirstTriggered(true)
+                delay(3000)
+                showReviewInviteDialogState.value = true
+            }
         }
     }
 
@@ -138,8 +145,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>, showReviewInviteDialogState: MutableState<Boolean>) {
+fun BottomNavApp(
+    showPermissionDialogState: MutableState<DialogType?>,
+    showReviewInviteDialogState: MutableState<Boolean>,
+    storageViewModel: IAnimeStorageViewModel
+) {
     val navController = rememberNavController()
+    val activity = LocalActivity.current
 
     Scaffold(
         bottomBar = {
@@ -174,21 +186,24 @@ fun BottomNavApp(showPermissionDialogState: MutableState<DialogType?>, showRevie
     ) { innerPadding ->
         AnimeNavHost(innerPadding, navController)
         PermissionDialogDisplay(showPermissionDialogState)
-        ReviewInviteDialogDisplay(showReviewInviteDialogState)
+        ReviewInviteDialogDisplay(showReviewInviteDialogState.value, onConfirm = {
+            activity?.launchInAppReview()
+            showReviewInviteDialogState.value = false
+        }, onDismiss = {
+            storageViewModel.markReviewFirstTriggered(false)
+            storageViewModel.resetAnimeListClick()
+            showReviewInviteDialogState.value = false
+        })
     }
 }
 
 @Composable
-private fun ReviewInviteDialogDisplay(showReviewInviteDialogState: MutableState<Boolean>) {
-    val activity = LocalActivity.current
-    if (showReviewInviteDialogState.value) {
+private fun ReviewInviteDialogDisplay(showReviewInviteDialogState: Boolean, onConfirm: () -> Unit,  onDismiss: () -> Unit) {
+    if (showReviewInviteDialogState) {
         CustomAlertDialog(
             type = DialogType.REVIEW_INVITE,
-            onConfirm = {
-                activity?.launchInAppReview()
-                showReviewInviteDialogState.value = false
-            },
-            onDismiss = { showReviewInviteDialogState.value = false }
+            onConfirm = { onConfirm() },
+            onDismiss = { onDismiss() }
         )
     }
 }
