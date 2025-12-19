@@ -52,6 +52,7 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
 import com.aaron.chen.animeone.app.view.ui.widget.PullToRefresh
+import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
@@ -63,9 +64,10 @@ import org.koin.androidx.compose.koinViewModel
 fun AnimeScreen(
     navController: NavHostController
 ) {
-    val viewModel = koinViewModel<AnimeoneViewModel>()
+    val animeViewModel = koinViewModel<AnimeoneViewModel>()
+    val storageViewModel = koinViewModel<AnimeStorageViewModel>()
     val context = LocalContext.current
-    val animeItems = viewModel.requestAnimeList().collectAsLazyPagingItems()
+    val animeItems = animeViewModel.requestAnimeList().collectAsLazyPagingItems()
     var searchQuery by remember { mutableStateOf(DefaultConst.EMPTY_STRING) }
     val scrollToTopTriggerFlow = navController.currentBackStackEntry?.savedStateHandle
         ?.getStateFlow(ExtraConst.SCROLL_TO_TOP, false)
@@ -135,6 +137,7 @@ fun AnimeScreen(
                             }
                             items(filteredItems) { anime ->
                                 AnimeItem(anime, onClick = {
+                                    storageViewModel.increaseAnimeListClick()
                                     val intent = Intent(context, AnimePlayerActivity::class.java)
                                     intent.putExtra(ExtraConst.ANIME_ID, anime.id)
                                     intent.putExtra(ExtraConst.PLAY_LAST, true)

@@ -16,4 +16,9 @@ interface IAnimeStorageViewModel {
     fun requestBookState(animeId: String)
     suspend fun bookAnime(anime: AnimeFavoriteBean)
     suspend fun unbookAnime(animeId: String)
+    fun increaseAnimeListClick()
+    fun resetAnimeListClick()
+    fun markReviewFirstTriggered(trigger: Boolean)
+    suspend fun recordFirstLaunchDate()
+    suspend fun shouldTryReview(): Boolean
 }

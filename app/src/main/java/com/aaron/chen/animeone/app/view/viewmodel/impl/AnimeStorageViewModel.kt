@@ -74,4 +74,32 @@ class AnimeStorageViewModel: ViewModel(), IAnimeStorageViewModel, KoinComponent 
             storageRepository.unbookAnime(animeId)
         }
     }
+
+    override fun increaseAnimeListClick() {
+        viewModelScope.launch {
+            storageRepository.increaseAnimeListClick()
+        }
+    }
+
+    override fun resetAnimeListClick() {
+        viewModelScope.launch {
+            storageRepository.resetAnimeListClick()
+        }
+    }
+
+    override fun markReviewFirstTriggered(trigger: Boolean) {
+        viewModelScope.launch {
+            storageRepository.markReviewFirstTriggered(trigger)
+        }
+    }
+
+    override suspend fun recordFirstLaunchDate() {
+        viewModelScope.launch {
+            storageRepository.recordFirstLaunchDate()
+        }
+    }
+
+    override suspend fun shouldTryReview(): Boolean {
+        return storageRepository.shouldTryReview()
+    }
 }
