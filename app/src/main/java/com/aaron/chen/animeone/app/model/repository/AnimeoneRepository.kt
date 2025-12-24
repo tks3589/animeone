@@ -57,7 +57,7 @@ class AnimeoneRepository: IAnimeoneRepository, KoinComponent {
         return animeApiModel.requestAnimeVideo(dataRaw)
     }
 
-    override fun requestAnimeComments(animeId: String): Flow<List<AnimeCommentBean>> {
-        return animeApiModel.requestComments(animeId)
+    override fun requestAnimeComments(animeId: String, next: String?): Flow<List<AnimeCommentBean>> {
+        return animeApiModel.requestComments(animeId, next)
     }
 }

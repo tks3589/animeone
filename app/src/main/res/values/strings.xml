@@ -32,4 +32,6 @@
     <string name="permission_video_write_title">請“全部允許”啟用寫入影片權限</string>
     <string name="permission_video_write_message">若未授權啟用，將無法寫入下載影片。</string>
     <string name="download_video_empty">沒有下載影片\n請檢查是否尚未“全部允許”讀取影片權限</string>
+    <string name="has_no_more_comment">沒有更多留言囉</string>
+    <string name="has_more_comment">載入更多留言</string>
 </resources>

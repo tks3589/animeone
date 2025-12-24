@@ -17,5 +17,5 @@ interface IAnimeoneRepository {
     fun requestAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean>
     fun requestAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>>
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
-    fun requestAnimeComments(animeId: String): Flow<List<AnimeCommentBean>>
+    fun requestAnimeComments(animeId: String, next: String?): Flow<List<AnimeCommentBean>>
 }

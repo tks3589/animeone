@@ -10,9 +10,22 @@ import com.google.gson.annotations.SerializedName
 
 
 class AnimeCommentRespVo{
+    @SerializedName("cursor")
+    var cursor: CursorVo? = null
+        get() = field ?: CursorVo()
+
     @SerializedName("response")
     var data: List<CommentRespVo>? = null
         get() = field ?: emptyList()
+}
+class CursorVo {
+    @SerializedName("hasNext")
+    var hasNext: Boolean? = null
+        get() = field ?: false
+
+    @SerializedName("next")
+    var next: String? = null
+        get() = field.orEmpty()
 }
 class CommentRespVo {
     @SerializedName("id")
@@ -21,6 +34,10 @@ class CommentRespVo {
 
     @SerializedName("createdAt")
     var createdAt: String? = null
+        get() = field.orEmpty()
+
+    @SerializedName("parent")
+    var parent: String? = null
         get() = field.orEmpty()
 
     @SerializedName("raw_message")
@@ -76,11 +93,14 @@ fun AnimeCommentRespVo.toCommentList(): List<AnimeCommentBean> {
         AnimeCommentBean(
             id = comment.id!!,
             createdAt = DateTimeUtils.formatDate(comment.createdAt!!),
+            parent = comment.parent!!,
             message = comment.message!!,
             likes = comment.likes!!,
             dislikes = comment.dislikes!!,
             media = comment.media!!.toList(),
-            user = comment.user!!.toBean()
+            user = comment.user!!.toBean(),
+            hasNext = cursor!!.hasNext!!,
+            next = cursor!!.next!!
         )
     }
 }

@@ -21,9 +21,10 @@ class AnimeVideoRespVo {
 }
 
 fun AnimeVideoRespVo.toVideo(cookie: String): AnimeVideoBean {
+    val filterSource = source?.filter { it.type == "video/mp4" }
     return AnimeVideoBean(
-        src = source?.firstOrNull()?.src ?: DefaultConst.EMPTY_STRING,
+        src = filterSource?.firstOrNull()?.src ?: DefaultConst.EMPTY_STRING,
         cookie = cookie,
-        type = source?.firstOrNull()?.type ?: DefaultConst.EMPTY_STRING
+        type = filterSource?.firstOrNull()?.type ?: DefaultConst.EMPTY_STRING
     )
 }

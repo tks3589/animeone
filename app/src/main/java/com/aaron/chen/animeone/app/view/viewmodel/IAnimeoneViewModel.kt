@@ -19,5 +19,5 @@ interface IAnimeoneViewModel {
     fun requestAnimeSeasonTimeLine()
     fun requestAnimeEpisodes(animeId: String)
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
-    fun requestAnimeComments(animeId: String)
+    fun requestAnimeComments(animeId: String, next: String? = null, initial: Boolean = false)
 }
