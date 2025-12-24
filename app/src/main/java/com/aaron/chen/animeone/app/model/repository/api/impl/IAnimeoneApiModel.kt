@@ -12,5 +12,5 @@ interface IAnimeoneApiModel {
     fun getAnimeSeasonTimeLine(): Flow<AnimeSeasonTimeLineBean>
     fun getAnimeEpisodes(animeId: String): Flow<List<AnimeEpisodeBean>>
     fun requestAnimeVideo(dataRaw: String): Flow<AnimeVideoBean>
-    fun requestComments(animeId: String): Flow<List<AnimeCommentBean>>
+    fun requestComments(animeId: String, next: String?): Flow<List<AnimeCommentBean>>
 }

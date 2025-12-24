@@ -47,6 +47,7 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeDownloadViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeStorageViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
+import com.aaron.chen.animeone.constant.DefaultConst
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -151,7 +152,7 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
             }
             launch {
                 //loading comments
-                animeoneViewModel.requestAnimeComments(it.id)
+                animeoneViewModel.requestAnimeComments(it.id, initial = true)
             }
         }
     }
@@ -177,7 +178,9 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
                 PlayerScreenContent(
                     activity = it,
                     animeId = animeId,
+                    commentAnimeId = selectedEpisodeState.value?.id ?: DefaultConst.EMPTY_STRING,
                     playerSourceState = playerSourceState,
+                    animeoneViewModel = animeoneViewModel,
                     playerViewModel = playerViewModel,
                     storageViewModel = storageViewModel,
                     downloadViewModel = downloadViewModel

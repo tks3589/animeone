@@ -42,6 +42,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -77,9 +78,11 @@ import com.aaron.chen.animeone.app.view.ui.widget.CommonTextL
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextM
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextS
 import com.aaron.chen.animeone.app.view.ui.widget.CommonTextXS
+import com.aaron.chen.animeone.app.view.ui.widget.SpoilerText
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeDownloadViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeStorageViewModel
+import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import com.aaron.chen.animeone.utils.MediaUtils.getImageRequest
 import com.aaron.chen.animeone.utils.MediaUtils.getVideoHeaders
@@ -94,7 +97,9 @@ import kotlinx.datetime.Clock
 fun PlayerScreenContent(
     activity: Activity,
     animeId: String,
+    commentAnimeId: String,
     playerSourceState: PlayerSourceState,
+    animeoneViewModel: IAnimeoneViewModel,
     playerViewModel: IAnimePlayerViewModel,
     storageViewModel: IAnimeStorageViewModel,
     downloadViewModel: IAnimeDownloadViewModel
@@ -150,7 +155,9 @@ fun PlayerScreenContent(
             }
             commentSection(
                 commentsLoadState = commentsLoadState,
-                imageDialogUrl = imageDialogUrl
+                animeoneViewModel = animeoneViewModel,
+                imageDialogUrl = imageDialogUrl,
+                commentAnimeId = commentAnimeId
             )
         }
     }
@@ -397,7 +404,9 @@ class PlayerActionHandler(
 
 fun LazyListScope.commentSection(
     commentsLoadState: State<UiState<List<AnimeCommentBean>>>,
-    imageDialogUrl: MutableState<String?>
+    animeoneViewModel: IAnimeoneViewModel,
+    imageDialogUrl: MutableState<String?>,
+    commentAnimeId: String
 ) {
     item {
         CommonTextM(
@@ -446,8 +455,39 @@ fun LazyListScope.commentSection(
                     CommentItem(comment) {
                         imageDialogUrl.value = it
                     }
-                    Divider(modifier = Modifier.padding(vertical = CommonMargin.m2))
+                    Divider(
+                        modifier = Modifier.padding(vertical = CommonMargin.m2)
+                    )
                 }
+            }
+            item {
+                val bean = state.data.last()
+                if (bean.hasNext.not()) {
+                    CommonTextS(
+                        text = stringResource(R.string.has_no_more_comment),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(CommonMargin.m2),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    TextButton(
+                        onClick = { animeoneViewModel.requestAnimeComments(animeId = commentAnimeId, next = bean.next) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                    ) {
+                        CommonTextS(
+                            text = stringResource(R.string.has_more_comment),
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
             }
         }
     }
@@ -455,8 +495,15 @@ fun LazyListScope.commentSection(
 
 @Composable
 fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
+    val isReply = comment.parent.isNotEmpty()
     val parts = splitMessageWithMedia(comment.message)
-    Row(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(
+            start = if (isReply) CommonMargin.m10 else 0.dp,
+            end = CommonMargin.m4
+        )
+    ) {
         Avatar(url = comment.user.avatar.url)
         Spacer(modifier = Modifier.width(CommonMargin.m2))
         Column(modifier = Modifier.weight(1f)) {
@@ -468,10 +515,8 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
                 when (part) {
                     is MessagePart.Text -> {
                         if (part.text.isNotBlank()) {
-                            CommonTextS(
+                            SpoilerText(
                                 text = part.text.trim(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Start,
                                 modifier = Modifier.padding(top = CommonMargin.m1)
                             )
                         }

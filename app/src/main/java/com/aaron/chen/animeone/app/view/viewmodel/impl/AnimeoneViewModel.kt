@@ -32,6 +32,8 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
         return animeRepository.requestAnimes().cachedIn(viewModelScope)
     }
     private var commentJob: Job? = null
+    private val cacheCommentList: MutableList<AnimeCommentBean> = mutableListOf()
+
 
     override fun requestAnimeSeasonTimeLine() {
         viewModelScope.launch {
@@ -67,19 +69,22 @@ class AnimeoneViewModel: ViewModel(), IAnimeoneViewModel, KoinComponent {
         return animeRepository.requestAnimeVideo(dataRaw)
     }
 
-    override fun requestAnimeComments(animeId: String) {
+    override fun requestAnimeComments(animeId: String, next: String?, initial: Boolean) {
+        if (initial) {
+            cacheCommentList.clear()
+            commentState.value = UiState.Loading
+        }
         commentJob?.cancel()
         commentJob = viewModelScope.launch {
-            animeRepository.requestAnimeComments(animeId)
-                .onStart {
-                    commentState.value = UiState.Loading
-                }.catch {
+            animeRepository.requestAnimeComments(animeId, next)
+                .catch {
                     commentState.value = UiState.Error(it.message)
                 }.collect { result ->
                     if (result.isEmpty()) {
                         commentState.value = UiState.Empty
                     } else {
-                        commentState.value = UiState.Success(result)
+                        cacheCommentList.addAll(result)
+                        commentState.value = UiState.Success(cacheCommentList.toList())
                     }
                 }
         }
