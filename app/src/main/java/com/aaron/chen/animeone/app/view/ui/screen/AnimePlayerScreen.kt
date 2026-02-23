@@ -152,7 +152,7 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
             }
             launch {
                 //loading comments
-                animeoneViewModel.requestAnimeComments(it.id, initial = true)
+                animeoneViewModel.requestAnimeComments(it.id)
             }
         }
     }

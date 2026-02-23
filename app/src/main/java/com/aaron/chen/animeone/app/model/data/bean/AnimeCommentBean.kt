@@ -6,30 +6,28 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class AnimeCommentBean (
     val id: String,
-    val createdAt: String,
-    val parent: String,
-    val message: String,
-    val likes: Int,
-    val dislikes: Int,
-    val media: List<MediaBean>,
+    val pid: String,
+    val text: String,
     val user: UserBean,
-    val hasNext: Boolean,
-    val next: String
-) : Parcelable
-
-@Parcelize
-data class MediaBean(
-    val type: String,
-    val url: String
+    val locator: LocatorBean,
+    val score: Int,
+    val vote: Int,
+    val time: String,
+    val imported: Boolean,
+    val title: String,
+    val isReply: Boolean
 ) : Parcelable
 
 @Parcelize
 data class UserBean(
     val name: String,
-    val avatar: AvatarBean
+    val id: String,
+    val picture: String,
+    val admin: Boolean
 ) : Parcelable
 
 @Parcelize
-data class AvatarBean(
+data class LocatorBean(
+    val site: String,
     val url: String
 ) : Parcelable

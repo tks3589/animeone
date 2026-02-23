@@ -20,7 +20,7 @@ object RetrofitModule: KoinComponent {
     const val BASE_URL: String = "https://anime1.me/"
     const val VIDEO_API_URL: String = "https://v.anime1.me/api"
     const val ANIME_LIST_URL = "https://d1zquzjgwo9yb.cloudfront.net/"
-    const val COMMENTS_URL = "https://disqus.com/api/3.0/threads/listPosts.json?api_key=${ApiKey.DISQUS}&forum=anime1tk"
+    const val COMMENTS_URL = "https://comments.anime1.me/api/v1/find?site=anime1&sort=-active&format=tree"
 
     private lateinit var okHttpClient: OkHttpClient
 
