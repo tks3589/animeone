@@ -83,42 +83,13 @@ class AnimeoneApiModel: IAnimeoneApiModel, KoinComponent {
         }
     }
 
-    override fun requestComments(animeId: String, next: String?): Flow<List<AnimeCommentBean>> {
+    override fun requestComments(animeId: String): Flow<List<AnimeCommentBean>> {
         val uriBuilder = RetrofitModule.COMMENTS_URL.toUri().buildUpon()
-            .appendQueryParameter("thread", "link:${RetrofitModule.BASE_URL}$animeId")
-
-        if (next != null) {
-            uriBuilder.appendQueryParameter("cursor", next)
-        }
+            .appendQueryParameter("url", "${RetrofitModule.BASE_URL}$animeId")
 
         return apiModel.requestComments(requestTag, uriBuilder.build().toString())
             .map { vo ->
-                flattenComments(vo.toCommentList())
+                vo.toCommentList()
             }
     }
-
-    private fun flattenComments(
-        comments: List<AnimeCommentBean>
-    ): List<AnimeCommentBean> {
-
-        // 子留言依 parent 分組（保持原順序）
-        val replyMap = comments
-            .filter { it.parent.isNotBlank() }
-            .groupBy { it.parent }
-
-        return buildList {
-            comments
-                .filter { it.parent.isBlank() } // 主留言（新→舊）
-                .forEach { main ->
-                    // 1️⃣ 主留言
-                    add(main)
-
-                    // 2️⃣ 接在後面的子留言（新→舊）
-                    replyMap[main.id]?.let { replies ->
-                        addAll(replies)
-                    }
-                }
-        }
-    }
-
 }

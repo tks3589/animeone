@@ -1,8 +1,7 @@
 package com.aaron.chen.animeone.app.model.data.responsevo
 
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
-import com.aaron.chen.animeone.app.model.data.bean.AvatarBean
-import com.aaron.chen.animeone.app.model.data.bean.MediaBean
+import com.aaron.chen.animeone.app.model.data.bean.LocatorBean
 import com.aaron.chen.animeone.app.model.data.bean.UserBean
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.utils.DateTimeUtils
@@ -10,119 +9,158 @@ import com.google.gson.annotations.SerializedName
 
 
 class AnimeCommentRespVo{
-    @SerializedName("cursor")
-    var cursor: CursorVo? = null
-        get() = field ?: CursorVo()
-
-    @SerializedName("response")
-    var data: List<CommentRespVo>? = null
+    @SerializedName("comments")
+    var data: List<CommentBlockRespVo>? = null
         get() = field ?: emptyList()
-}
-class CursorVo {
-    @SerializedName("hasNext")
-    var hasNext: Boolean? = null
-        get() = field ?: false
 
-    @SerializedName("next")
-    var next: String? = null
+    @SerializedName("info")
+    var info: InfoRespVo? = null
+        get() = field ?: InfoRespVo()
+}
+
+class InfoRespVo {
+    @SerializedName("url")
+    var url: String? = null
+        get() = field.orEmpty()
+
+    @SerializedName("count")
+    var count: Int? = null
+        get() = field ?: DefaultConst.INT_COUNT
+
+    @SerializedName("count_left")
+    var countLeft: Int? = null
+        get() = field ?: DefaultConst.INT_COUNT
+
+    @SerializedName("first_time")
+    var firstTime: String? = null
+        get() = field.orEmpty()
+
+    @SerializedName("last_time")
+    var lastTime: String? = null
         get() = field.orEmpty()
 }
+
+class CommentBlockRespVo {
+    @SerializedName("comment")
+    var comment: CommentRespVo? = null
+        get() = field ?: CommentRespVo()
+
+    @SerializedName("replies")
+    var replies: List<CommentBlockRespVo>? = null
+        get() = field ?: emptyList()
+}
+
 class CommentRespVo {
     @SerializedName("id")
     var id: String? = null
         get() = field.orEmpty()
 
-    @SerializedName("createdAt")
-    var createdAt: String? = null
+    @SerializedName("pid")
+    var pid: String? = null
         get() = field.orEmpty()
 
-    @SerializedName("parent")
-    var parent: String? = null
+    @SerializedName("text")
+    var text: String? = null
         get() = field.orEmpty()
 
-    @SerializedName("raw_message")
-    var message: String? = null
-        get() = field.orEmpty()
-
-    @SerializedName("likes")
-    var likes: Int? = null
-        get() = field ?: DefaultConst.INT_COUNT
-
-    @SerializedName("dislikes")
-    var dislikes: Int? = null
-        get() = field ?: DefaultConst.INT_COUNT
-
-    @SerializedName("media")
-    var media: List<MediaVo>? = null
-        get() = field ?: emptyList()
-
-    @SerializedName("author")
+    @SerializedName("user")
     var user: UserVo? = null
         get() = field ?: UserVo()
 
+    @SerializedName("locator")
+    var locator: LocatorVo? = null
+        get() = field ?: LocatorVo()
 
-    class MediaVo {
-        @SerializedName("mediaType")
-        var type: String? = null
-            get() = field.orEmpty()
+    @SerializedName("score")
+    var score: Int? = null
+        get() = field ?: DefaultConst.INT_COUNT
 
-        @SerializedName("url")
-        var url: String? = null
-            get() = field.orEmpty()
-    }
+    @SerializedName("vote")
+    var vote: Int? = null
+        get() = field ?: DefaultConst.INT_COUNT
+
+    @SerializedName("time")
+    var time: String? = null
+        get() = field.orEmpty()
+
+    @SerializedName("imported")
+    var imported: Boolean? = null
+        get() = field ?: false
+
+    @SerializedName("title")
+    var title: String? = null
+        get() = field.orEmpty()
 
     class UserVo {
         @SerializedName("name")
         var name: String? = null
             get() = field.orEmpty()
 
-        @SerializedName("avatar")
-        var avatar: AvatarVo? = null
-            get() = field ?: AvatarVo()
+        @SerializedName("id")
+        var id: String? = null
+            get() = field.orEmpty()
 
-        class AvatarVo {
-            @SerializedName("permalink")
-            var url: String? = null
-                get() = field.orEmpty()
-        }
+        @SerializedName("picture")
+        var picture: String? = null
+            get() = field.orEmpty()
+
+        @SerializedName("admin")
+        var admin: Boolean? = null
+            get() = field ?: false
+    }
+
+    class LocatorVo {
+        @SerializedName("site")
+        var site: String? = null
+            get() = field.orEmpty()
+
+        @SerializedName("url")
+        var url: String? = null
+            get() = field.orEmpty()
     }
 }
 
 fun AnimeCommentRespVo.toCommentList(): List<AnimeCommentBean> {
-    return data!!.map { comment ->
-        AnimeCommentBean(
-            id = comment.id!!,
-            createdAt = DateTimeUtils.formatDate(comment.createdAt!!),
-            parent = comment.parent!!,
-            message = comment.message!!,
-            likes = comment.likes!!,
-            dislikes = comment.dislikes!!,
-            media = comment.media!!.toList(),
-            user = comment.user!!.toBean(),
-            hasNext = cursor!!.hasNext!!,
-            next = cursor!!.next!!
-        )
+    return data!!.flatMap { block ->
+        block.toCommentBeanList(isReply = false)
     }
 }
 
-fun List<CommentRespVo.MediaVo>.toList(): List<MediaBean> {
-    return map { media ->
-        MediaBean(
-            type = media.type!!,
-            url = media.url!!
-        )
+private fun CommentBlockRespVo.toCommentBeanList(isReply: Boolean): List<AnimeCommentBean> {
+    val current = comment
+    val currentBean = AnimeCommentBean(
+        id = current!!.id!!,
+        pid = current.pid!!,
+        text = current.text!!,
+        user = current.user!!.toUserBean(),
+        locator = current.locator!!.toLocatorBean(),
+        score = current.score!!,
+        vote = current.vote!!,
+        time = DateTimeUtils.formatDate(current.time!!),
+        imported = current.imported!!,
+        title = current.title!!,
+        isReply = isReply
+    )
+
+    val replyBeans = replies!!.flatMap { reply ->
+        reply.toCommentBeanList(isReply = true)
     }
+
+    return listOf(currentBean) + replyBeans
 }
 
-fun CommentRespVo.UserVo.toBean(): UserBean {
-    return UserBean(
-        name = name!!,
-        avatar = avatar!!.toBean()
+fun CommentRespVo.LocatorVo.toLocatorBean(): LocatorBean {
+    return LocatorBean(
+        site = site!!,
+        url = url!!
     )
 }
 
-fun CommentRespVo.UserVo.AvatarVo.toBean(): AvatarBean {
-    return AvatarBean(
-        url = url!!
+fun CommentRespVo.UserVo.toUserBean(): UserBean {
+    return UserBean(
+        name = name!!,
+        id = id!!,
+        picture = picture!!,
+        admin = admin!!
     )
 }
