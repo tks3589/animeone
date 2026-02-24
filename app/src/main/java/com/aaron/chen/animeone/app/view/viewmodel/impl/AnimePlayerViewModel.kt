@@ -7,7 +7,7 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.view.controller.PlayerController
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
-import com.aaron.chen.animeone.utils.MediaUtils.getMediaSource
+import com.aaron.chen.animeone.utils.CommentUtils.getMediaSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.android.annotation.KoinViewModel
 import org.koin.core.component.KoinComponent

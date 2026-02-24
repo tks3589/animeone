@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.view.View
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -59,7 +63,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.model.data.bean.AnimeCommentBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
@@ -77,9 +81,11 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeStorageViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
-import com.aaron.chen.animeone.utils.MediaUtils.getVideoHeaders
-import com.aaron.chen.animeone.utils.MediaUtils.getVideoSrc
-import com.google.accompanist.placeholder.material.placeholder
+import com.aaron.chen.animeone.utils.CommentUtils.getImageRequest
+import com.aaron.chen.animeone.utils.CommentUtils.getVideoHeaders
+import com.aaron.chen.animeone.utils.CommentUtils.getVideoSrc
+import com.aaron.chen.animeone.utils.CommentUtils.parseMessage
+import com.aaron.chen.animeone.utils.MessagePart
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
@@ -466,7 +472,7 @@ fun LazyListScope.commentSection(
 @Composable
 fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
     val isReply = comment.isReply
-//    val parts = splitMessageWithMedia(comment.message)
+    val parts = parseMessage(comment.text.trim())
     Row(modifier = Modifier
         .fillMaxWidth()
         .padding(
@@ -481,28 +487,30 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
                 text = comment.user.name,
                 color = MaterialTheme.colorScheme.primary
             )
-            SpoilerText(
-                text = comment.text.trim(),
-                modifier = Modifier.padding(top = CommonMargin.m1)
-            )
-//            parts.forEach { part ->
-//                when (part) {
-//                    is MessagePart.Text -> {
-//                        if (part.text.isNotBlank()) {
-//                            SpoilerText(
-//                                text = part.text.trim(),
-//                                modifier = Modifier.padding(top = CommonMargin.m1)
-//                            )
-//                        }
-//                    }
-//
-//                    is MessagePart.ImagePlaceholder -> {
-//                        comment.media.getOrNull(part.mediaIndex)?.let {
-//                            CommentImageResources(it, onImageClick)
-//                        }
-//                    }
-//                }
-//            }
+            parts.forEach { part ->
+                when (part) {
+                    is MessagePart.Text -> {
+                        CommonTextS(
+                            text = part.text.trim(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.padding(top = CommonMargin.m1)
+                        )
+                    }
+                    is MessagePart.Spoiler -> {
+                        SpoilerText(
+                            text = part.text.trim(),
+                            modifier = Modifier.padding(top = CommonMargin.m1)
+                        )
+                    }
+                    is MessagePart.Media -> {
+                        CommentImageResources(part.url, onImageClick)
+                    }
+                    MessagePart.BlankLine -> {
+                        Spacer(modifier = Modifier.height(CommonMargin.m1))
+                    }
+                }
+            }
             CommonTextXS(
                 text = comment.time,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -512,69 +520,64 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
     }
 }
 
-//@Composable
-//private fun CommentImageResources(media: MediaBean, onImageClick: (String) -> Unit) {
-//    Spacer(modifier = Modifier.height(CommonMargin.m2))
-//    val isLoaded = remember { mutableStateOf(false) }
-//    val context = LocalContext.current
-//    SubcomposeAsyncImage(
-//        model = getImageRequest(context, media.url),
-//        contentDescription = null,
-//        contentScale = ContentScale.Fit,
-//        modifier = Modifier
-//            .heightIn(max = 200.dp)
-//            .clip(RoundedCornerShape(CommonMargin.m2))
-//            .background(Color.LightGray)
-//            .clickable(enabled = isLoaded.value) {
-//                onImageClick(media.url)
-//            },
-//        loading = {
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth(0.5f)
-//                    .height(150.dp),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                CircularProgressIndicator(modifier = Modifier.size(CommonMargin.m4), color = Color.White)
-//            }
-//        },
-//        onSuccess = {
-//            isLoaded.value = true
-//        },
-//        error = {
-//            isLoaded.value = false
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth(0.5f)
-//                    .height(150.dp),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                CommonTextXS(
-//                    text = stringResource(R.string.error_text),
-//                    color = Color.White
-//                )
-//            }
-//        }
-//    )
-//}
+@Composable
+private fun CommentImageResources(mediaUrl: String, onImageClick: (String) -> Unit) {
+    Spacer(modifier = Modifier.height(CommonMargin.m2))
+    val isLoaded = remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    SubcomposeAsyncImage(
+        model = getImageRequest(context, mediaUrl),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .heightIn(max = 200.dp)
+            .clip(RoundedCornerShape(CommonMargin.m2))
+            .background(Color.LightGray)
+            .clickable(enabled = isLoaded.value) {
+                onImageClick(mediaUrl)
+            },
+        loading = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(CommonMargin.m4), color = Color.White)
+            }
+        },
+        onSuccess = {
+            isLoaded.value = true
+        },
+        error = {
+            isLoaded.value = false
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CommonTextXS(
+                    text = stringResource(R.string.error_text),
+                    color = Color.White
+                )
+            }
+        }
+    )
+}
 
 @Composable
 private fun Avatar(url: String) {
-    val isAvatarLoading = remember { mutableStateOf(false) }
+    val defaultAvatar = painterResource(R.drawable.ic_default_avatar)
     AsyncImage(
         model = url,
         contentDescription = "頭像",
         modifier = Modifier
             .size(40.dp)
-            .clip(CircleShape)
-            .placeholder(
-                visible = isAvatarLoading.value,
-                color = Color.LightGray,
-                shape = CircleShape
-            ),
-        contentScale = ContentScale.Crop,
-        onState = { state ->
-            isAvatarLoading.value = state is AsyncImagePainter.State.Loading
-        }
+            .clip(CircleShape),
+        contentScale = ContentScale.Fit,
+        placeholder = defaultAvatar, // 載入中
+        error = defaultAvatar,       // 失敗
+        fallback = defaultAvatar     // url 為 null
     )
 }
