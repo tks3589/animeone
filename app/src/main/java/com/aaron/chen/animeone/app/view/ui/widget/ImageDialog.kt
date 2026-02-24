@@ -23,7 +23,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.SubcomposeAsyncImage
 import com.aaron.chen.animeone.R
 import com.aaron.chen.animeone.app.view.ui.theme.CommonMargin
-import com.aaron.chen.animeone.utils.MediaUtils.getImageRequest
+import com.aaron.chen.animeone.utils.CommentUtils.getImageRequest
 
 @Composable
 fun ImageDialog(
