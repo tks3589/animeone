@@ -70,7 +70,8 @@ class AnimeDownloadViewModel: ViewModel(), IAnimeDownloadViewModel, KoinComponen
             lowerName.endsWith(".gif") -> "image/gif"
             lowerName.endsWith(".mov") -> "video/quicktime"
             lowerName.endsWith(".mkv") -> "video/x-matroska"
-            else -> "video/mp4"
+            lowerName.endsWith(".mp4") -> "video/mp4"
+            else -> "image/png"
         }
 
         Toast.makeText(context, "開始下載", Toast.LENGTH_SHORT).show()

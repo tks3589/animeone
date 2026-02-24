@@ -3,6 +3,7 @@ package com.aaron.chen.animeone.app.view.ui.screen
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Build
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
@@ -70,7 +71,7 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
         val currentVideoState = playerViewModel.currentVideo.collectAsStateWithLifecycle()
         val isVideoBufferingState = playerViewModel.isVideoBuffering.collectAsStateWithLifecycle()
         val isFullscreen = remember { mutableStateOf(false) }
-        val imageDialogUrl = remember { mutableStateOf<String?>(null) }
+        val imageDialogUrlState = remember { mutableStateOf<Pair<Int, List<String>>?>(null) }
 
         PlayerSourceState(
             episodeLoadState,
@@ -80,13 +81,13 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
             currentVideoState,
             isVideoBufferingState,
             isFullscreen,
-            imageDialogUrl
+            imageDialogUrlState
         )
     }
     val isFullscreen = playerSourceState.isFullscreen
     val selectedEpisodeState = playerSourceState.selectedEpisodeState
     val episodeLoadState = playerSourceState.episodeLoadState
-    val imageDialogUrl = playerSourceState.imageDialogUrl
+    val imageDialogUrlState = playerSourceState.imageDialogUrlState
 
     LaunchedEffect(Unit) {
         activity?.window?.let {
@@ -126,8 +127,8 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
         }
     }
 
-    LaunchedEffect(imageDialogUrl.value) {
-        if (imageDialogUrl.value != null) {
+    LaunchedEffect(imageDialogUrlState.value) {
+        if (imageDialogUrlState.value != null) {
             playerViewModel.pause()
         }
     }
@@ -196,12 +197,14 @@ fun AnimePlayerScreen(playerViewModel: IAnimePlayerViewModel, animeId: String, e
     }
 
     // comment image dialog
-    imageDialogUrl.value?.let { url ->
+    imageDialogUrlState.value?.let { (index, urls) ->
         ImageDialog(
-            imageUrl = url,
-            onDismiss = { imageDialogUrl.value = null },
+            imageUrls = urls,
+            startIndex = index,
+            onDismiss = { imageDialogUrlState.value = null },
             onDownload = {
-                downloadViewModel.download(url)
+                Log.d("aaron_tt_ondownload", it)
+                downloadViewModel.download(it)
             }
         )
     }
@@ -233,5 +236,5 @@ data class PlayerSourceState(
     val currentVideoState: State<AnimeVideoBean?>,
     val isVideoBufferingState: State<Boolean>,
     val isFullscreen: MutableState<Boolean>,
-    val imageDialogUrl: MutableState<String?>
+    val imageDialogUrlState: MutableState<Pair<Int, List<String>>?>
 )

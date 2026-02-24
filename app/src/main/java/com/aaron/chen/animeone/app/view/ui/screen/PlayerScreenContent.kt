@@ -107,7 +107,7 @@ fun PlayerScreenContent(
     val favoriteBookState = playerSourceState.favoriteBookState
     val episodeLoadState = playerSourceState.episodeLoadState
     val commentsLoadState = playerSourceState.commentsLoadState
-    val imageDialogUrl = playerSourceState.imageDialogUrl
+    val imageDialogUrlState = playerSourceState.imageDialogUrlState
     val actionHandler = remember(activity) { PlayerActionHandler(activity, storageViewModel, downloadViewModel) }
     PlayerSection(
         player = playerViewModel.getPlayer(),
@@ -151,9 +151,7 @@ fun PlayerScreenContent(
             }
             commentSection(
                 commentsLoadState = commentsLoadState,
-                animeoneViewModel = animeoneViewModel,
-                imageDialogUrl = imageDialogUrl,
-                commentAnimeId = commentAnimeId
+                imageDialogUrlState = imageDialogUrlState
             )
         }
     }
@@ -400,9 +398,7 @@ class PlayerActionHandler(
 
 fun LazyListScope.commentSection(
     commentsLoadState: State<UiState<List<AnimeCommentBean>>>,
-    animeoneViewModel: IAnimeoneViewModel,
-    imageDialogUrl: MutableState<String?>,
-    commentAnimeId: String
+    imageDialogUrlState: MutableState<Pair<Int, List<String>>?>
 ) {
     item {
         CommonTextM(
@@ -449,7 +445,7 @@ fun LazyListScope.commentSection(
             items(state.data, key = { it.id }) { comment ->
                 Column(modifier = Modifier.padding(horizontal = CommonMargin.m4)) {
                     CommentItem(comment) {
-                        imageDialogUrl.value = it
+                        imageDialogUrlState.value = it
                     }
                     Divider(
                         modifier = Modifier.padding(vertical = CommonMargin.m2)
@@ -470,7 +466,7 @@ fun LazyListScope.commentSection(
 }
 
 @Composable
-fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
+fun CommentItem(comment: AnimeCommentBean, onImageClick: (Pair<Int, List<String>>) -> Unit) {
     val isReply = comment.isReply
     val parts = parseMessage(comment.text.trim())
     Row(modifier = Modifier
@@ -487,6 +483,7 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
                 text = comment.user.name,
                 color = MaterialTheme.colorScheme.primary
             )
+            val mediaUrlList = parts.filter { it is MessagePart.Media }.map { (it as MessagePart.Media).url }
             parts.forEach { part ->
                 when (part) {
                     is MessagePart.Text -> {
@@ -504,7 +501,7 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
                         )
                     }
                     is MessagePart.Media -> {
-                        CommentImageResources(part.url, onImageClick)
+                        CommentImageResources(mediaUrlList, mediaUrlList.indexOf(part.url), onImageClick)
                     }
                     MessagePart.BlankLine -> {
                         Spacer(modifier = Modifier.height(CommonMargin.m1))
@@ -521,12 +518,12 @@ fun CommentItem(comment: AnimeCommentBean, onImageClick: (String) -> Unit) {
 }
 
 @Composable
-private fun CommentImageResources(mediaUrl: String, onImageClick: (String) -> Unit) {
+private fun CommentImageResources(mediaUrlList: List<String>, index: Int, onImageClick: (Pair<Int, List<String>>) -> Unit) {
     Spacer(modifier = Modifier.height(CommonMargin.m2))
     val isLoaded = remember { mutableStateOf(false) }
     val context = LocalContext.current
     SubcomposeAsyncImage(
-        model = getImageRequest(context, mediaUrl),
+        model = getImageRequest(context, mediaUrlList[index]),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = Modifier
@@ -534,7 +531,7 @@ private fun CommentImageResources(mediaUrl: String, onImageClick: (String) -> Un
             .clip(RoundedCornerShape(CommonMargin.m2))
             .background(Color.LightGray)
             .clickable(enabled = isLoaded.value) {
-                onImageClick(mediaUrl)
+                onImageClick(Pair(index, mediaUrlList))
             },
         loading = {
             Box(
