@@ -3,6 +3,7 @@ package com.aaron.chen.animeone
 import android.app.Application
 import android.util.Log
 import com.aaron.chen.animeone.di.getKoinModuleList
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 import com.aaron.chen.animeone.module.retrofit.IRetrofitApi
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
@@ -15,6 +16,7 @@ class Application: Application() {
 
         initKoin()
         preInitRetrofitApi()
+        initGA()
     }
 
     private fun initKoin() {
@@ -22,6 +24,11 @@ class Application: Application() {
             androidContext(this@Application)
             modules(getKoinModuleList())
         }
+    }
+
+    private fun initGA() {
+        Ga4Tracker.init(this)
+        Ga4Tracker.trackAppOpen()
     }
 
     private fun preInitRetrofitApi() {

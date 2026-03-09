@@ -57,6 +57,7 @@ import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimeoneViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
 import com.aaron.chen.animeone.database.entity.AnimeEntity
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -98,6 +99,7 @@ fun AnimeScreen(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
+                    Ga4Tracker.trackSearch(searchQuery)
                     coroutineScope.launch {
                         listState.scrollToItem(0)
                     }
@@ -140,6 +142,7 @@ fun AnimeScreen(
                                     storageViewModel.increaseAnimeListClick()
                                     val intent = Intent(context, AnimePlayerActivity::class.java)
                                     intent.putExtra(ExtraConst.ANIME_ID, anime.id)
+                                    intent.putExtra(ExtraConst.ANIME_TITLE, anime.title)
                                     intent.putExtra(ExtraConst.PLAY_LAST, true)
                                     context.startActivity(intent)
                                 })

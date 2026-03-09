@@ -82,6 +82,7 @@ fun RecordScreen() {
                                     .clickable {
                                         val intent = Intent(context, AnimePlayerActivity::class.java)
                                         intent.putExtra(ExtraConst.ANIME_ID, anime.id)
+                                        intent.putExtra(ExtraConst.ANIME_TITLE, anime.title)
                                         intent.putExtra(ExtraConst.EPISODE, anime.episode)
                                         context.startActivity(intent)
                                     }

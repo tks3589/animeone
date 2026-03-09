@@ -9,7 +9,9 @@ import androidx.media3.exoplayer.source.MediaSource
 class PlayerController(
     private val player: ExoPlayer,
     private val onBufferingChanged: (Boolean) -> Unit,
-    private val onEpisodeEnd: () -> Unit
+    private val onEpisodeEnd: () -> Unit,
+    private val onPlay: () -> Unit,
+    private val onPause: () -> Unit
 ): Player.Listener {
     init {
         player.addListener(this)
@@ -18,6 +20,14 @@ class PlayerController(
     override fun onPlaybackStateChanged(playbackState: Int) {
         onBufferingChanged(playbackState == Player.STATE_BUFFERING)
         if (playbackState == Player.STATE_ENDED) onEpisodeEnd()
+    }
+
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        if (isPlaying) {
+            onPlay()
+        } else {
+            onPause()
+        }
     }
     fun prepare() = player.prepare()
     fun play() = player.play()

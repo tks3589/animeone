@@ -14,6 +14,7 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.impl.AnimePlayerViewModel
 import com.aaron.chen.animeone.constant.DefaultConst
 import com.aaron.chen.animeone.constant.ExtraConst
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class AnimePlayerActivity : ComponentActivity() {
@@ -26,7 +27,11 @@ class AnimePlayerActivity : ComponentActivity() {
         val animeId = intent.getStringExtra(ExtraConst.ANIME_ID) ?: DefaultConst.EMPTY_STRING
         val episode = intent.getIntExtra(ExtraConst.EPISODE, 1)
         val playLast = intent.getBooleanExtra(ExtraConst.PLAY_LAST, false)
+        val animeTitle = intent.getStringExtra(ExtraConst.ANIME_TITLE)
 
+        animeTitle?.let {
+            Ga4Tracker.trackOpenAnime(it)
+        }
         setContent {
             AnimeoneTheme {
                 AnimePlayerScreen(playerViewModel = playerViewModel, animeId = animeId, episode = episode, playLast = playLast)

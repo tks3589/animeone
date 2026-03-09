@@ -7,6 +7,7 @@ import com.aaron.chen.animeone.app.model.data.bean.AnimeEpisodeBean
 import com.aaron.chen.animeone.app.model.data.bean.AnimeVideoBean
 import com.aaron.chen.animeone.app.view.controller.PlayerController
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 import com.aaron.chen.animeone.utils.CommentUtils.getMediaSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.android.annotation.KoinViewModel
@@ -24,8 +25,23 @@ class AnimePlayerViewModel(context: Context): ViewModel(), IAnimePlayerViewModel
     private val playerController = PlayerController(
         player = player,
         onBufferingChanged = { isVideoBuffering.value = it },
-        onEpisodeEnd = { nextEpisode() }
+        onEpisodeEnd = {
+            trackGa4Anime(Ga4Tracker.ANIME_PLAY_TYPE.ANIME_COMPLETE)
+            nextEpisode()
+        },
+        onPlay = {
+            trackGa4Anime(Ga4Tracker.ANIME_PLAY_TYPE.ANIME_PLAYING)
+        },
+        onPause = {
+            trackGa4Anime(Ga4Tracker.ANIME_PLAY_TYPE.ANIME_PAUSE)
+        }
     )
+
+    private fun trackGa4Anime(type: Ga4Tracker.ANIME_PLAY_TYPE) {
+        selectedEpisode.value?.let {
+            Ga4Tracker.trackPlayAnimeStatus(type, it.title, it.episode)
+        }
+    }
 
     private fun nextEpisode() {
         val current = selectedEpisode.value

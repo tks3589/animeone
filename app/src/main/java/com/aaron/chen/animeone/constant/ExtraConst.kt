@@ -2,6 +2,7 @@ package com.aaron.chen.animeone.constant
 
 object ExtraConst {
     val ANIME_ID = "animeId"
+    val ANIME_TITLE = "animeTitle"
     val EPISODE = "episode"
     val PLAY_LAST = "playLast"
     val SCROLL_TO_TOP = "scrollToTop"

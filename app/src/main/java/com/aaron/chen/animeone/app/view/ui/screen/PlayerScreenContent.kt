@@ -80,6 +80,7 @@ import com.aaron.chen.animeone.app.view.viewmodel.IAnimeDownloadViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimePlayerViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeStorageViewModel
 import com.aaron.chen.animeone.app.view.viewmodel.IAnimeoneViewModel
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 import com.aaron.chen.animeone.module.retrofit.RetrofitModule
 import com.aaron.chen.animeone.utils.CommentUtils.getImageRequest
 import com.aaron.chen.animeone.utils.CommentUtils.getVideoHeaders
@@ -347,9 +348,11 @@ fun AnimeInfoSection(
         video = currentVideoState.value,
         isFavorite = (favoriteBookState.value as? UiState.Success)?.data ?: false,
         onDownload = { video, episode ->
+            Ga4Tracker.trackDownloadAnime(episode.title, episode.episode)
             actionHandler.download(video, episode)
         },
         onToggleFavorite = { episode, isFavorite ->
+            Ga4Tracker.trackFavoriteAnime(episode.title, episode.episode, isFavorite)
             coroutineScope.launch {
                 actionHandler.toggleFavorite(animeId, episode, isFavorite)
             }

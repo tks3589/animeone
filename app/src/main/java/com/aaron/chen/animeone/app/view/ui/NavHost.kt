@@ -12,8 +12,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,10 +23,12 @@ import com.aaron.chen.animeone.app.view.ui.screen.AnimeScreen
 import com.aaron.chen.animeone.app.view.ui.screen.DownloadScreen
 import com.aaron.chen.animeone.app.view.ui.screen.FavoriteScreen
 import com.aaron.chen.animeone.app.view.ui.screen.RecordScreen
+import com.aaron.chen.animeone.module.analytics.Ga4Tracker
 
 // 定義bottom nav的頁面與route
 @Composable
 fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) {
+    AnalyticsNavigationObserver(navController)
     NavHost(
         navController = navController,
         exitTransition = { ExitTransition.None }, // 關閉預設換頁動畫
@@ -42,10 +46,38 @@ fun AnimeNavHost(innerPadding: PaddingValues, navController: NavHostController) 
     }
 }
 
+@Composable
+fun AnalyticsNavigationObserver(navController: NavHostController) {
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            destination.route?.let { route ->
+                Ga4Tracker.trackScreen(Screen.findByTitle(route))
+            }
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose {
+            navController.removeOnDestinationChangedListener(listener)
+        }
+    }
+}
+
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Anime : Screen("anime", "動畫列表", Icons.Default.Home)
     object Calendar: Screen("calendar", "時間表", Icons.Default.DateRange)
     object Record : Screen("record", "觀看紀錄", Icons.Default.Refresh)
     object Favorite : Screen("favorite", "我的收藏", Icons.Default.Favorite)
     object Download : Screen("download", "下載影片", Icons.Default.List)
+
+    companion object {
+        fun findByTitle(route: String): String {
+            return when (route) {
+                Anime.route -> Anime.title
+                Calendar.route -> Calendar.title
+                Record.route -> Record.title
+                Favorite.route -> Favorite.title
+                Download.route -> Download.title
+                else -> route
+            }
+        }
+    }
 }

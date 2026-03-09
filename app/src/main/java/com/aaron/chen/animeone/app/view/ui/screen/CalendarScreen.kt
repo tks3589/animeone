@@ -127,6 +127,7 @@ fun CalendarScreen() {
                                         .clickable {
                                             val intent = Intent(context, AnimePlayerActivity::class.java)
                                             intent.putExtra(ExtraConst.ANIME_ID, anime.id)
+                                            intent.putExtra(ExtraConst.ANIME_TITLE, anime.title)
                                             intent.putExtra(ExtraConst.PLAY_LAST, true)
                                             context.startActivity(intent)
                                         }
